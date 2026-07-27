@@ -1,0 +1,18 @@
+# Local Redis for dev experiments (AIS replay, cache debugging).
+# The app itself uses Upstash REST (cloud, free) with an in-memory fallback — see M03.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: jagat-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  redis-data:

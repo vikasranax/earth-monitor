@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+
+# env — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# debugging
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# tests
+coverage/
+playwright-report/
+test-results/
+
+# platforms
+.vercel
+.firebase/
+.turbo
+dist/
+
+# os / editors
+.DS_Store
+*.pem
+Thumbs.db

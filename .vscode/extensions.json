@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-playwright.playwright",
+    "firebase.firebase-vscode",
+    "yoavbls.pretty-ts-errors"
+  ]
+}

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Build (no secrets required — env contract is optional-armed)
+        run: pnpm build
+
+      - name: NEXT_PUBLIC secret audit
+        run: |
+          if grep -rn "NEXT_PUBLIC" --include="*.ts" --include="*.tsx" src/lib src/services 2>/dev/null | grep -v "env.public"; then
+            echo "::error::NEXT_PUBLIC_* may only be read in src/lib/env.public.ts"
+            exit 1
+          fi
+          echo "secret hygiene: OK"
