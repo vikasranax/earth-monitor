@@ -1,9 +1,9 @@
 {
-  "name": "jagat-manthan",
+  "name": "earth-monitor",
   "version": "1.0.0",
   "private": true,
   "license": "MIT",
-  "description": "JAGAT-MANTHAN (जगत्-मन्थन) — real-time global intelligence terminal: geopolitics, markets, shipping, airspace, disasters, cyber, space. $0/month stack.",
+  "description": "Earth Monitor (जगत्-मन्थन) — real-time global intelligence terminal: geopolitics, markets, shipping, airspace, disasters, cyber, space. $0/month stack.",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -12,7 +12,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint --max-warnings=0",
+    "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -37,7 +37,7 @@
     "i18next-resources-to-backend": "^1.2.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.503.0",
-    "next": "^15.5.22",
+    "next": "^15.3.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-i18next": "^15.5.1",

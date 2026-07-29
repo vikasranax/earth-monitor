@@ -39,7 +39,7 @@ export default function BootPage() {
       {/* ── masthead ── */}
       <header>
         <p className="font-mono text-[11px] tracking-[0.32em] text-accent">
-          जगत्-मन्थन · SYSTEM BOOT SEQUENCE · DOC GMAI-BP-001 REV-A
+          जगत्-मन्थन · Earth Monitor SYSTEM BOOT SEQUENCE · DOC GMAI-BP-001 REV-A
         </p>
         <h1 className="mt-3 font-display text-[clamp(56px,10vw,124px)] font-black uppercase leading-[0.9]">
           Jagat-<span className="text-accent">Manthan</span>

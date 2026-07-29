@@ -1,4 +1,4 @@
-# JAGAT-MANTHAN (जगत्-मन्थन)
+# Earth Monitor (जगत्-मन्थन · Jagat-Manthan)
 
 ### The Churning of the World — a global intelligence terminal
 
