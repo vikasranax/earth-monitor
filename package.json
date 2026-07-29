@@ -2,7 +2,7 @@
   "name": "earth-monitor",
   "version": "1.0.0",
   "private": true,
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "description": "Earth Monitor (जगत्-मन्थन) — real-time global intelligence terminal: geopolitics, markets, shipping, airspace, disasters, cyber, space. $0/month stack.",
   "engines": {
     "node": ">=20.0.0"
