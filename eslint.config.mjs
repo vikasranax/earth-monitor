@@ -16,6 +16,7 @@ const eslintConfig = [
       "test-results/",
       ".vercel/",
       ".firebase/",
+      "next-env.d.ts",
     ],
   },
   // flat-config directory-search fix: make `eslint .` walk TS/TSX

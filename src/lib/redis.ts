@@ -13,7 +13,7 @@ export function getRedis(): Redis | null {
       url: serverEnv.UPSTASH_REDIS_REST_URL,
       token: serverEnv.UPSTASH_REDIS_REST_TOKEN,
     });
-    console.log("[jagat-manthan] redis: Upstash client armed");
+    console.warn("[jagat-manthan] redis: Upstash client armed");
   } else {
     console.warn(
       "[jagat-manthan] redis: UPSTASH_REDIS_REST_URL/TOKEN not set — " +

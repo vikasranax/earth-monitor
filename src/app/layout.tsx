@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { fontVariables } from "@/lib/fonts";
 import { serverEnv } from "@/lib/env";
 import { ErrorBoundary } from "@/components/error-boundary";
+import "./global.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(serverEnv.SITE_URL),
@@ -18,10 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
-      <body
-        className={`${fontVariables} min-h-screen bg-background font-sans text-foreground antialiased`}
-      >
-        <div className="scanline" aria-hidden="true" />
+      <body className={`${fontVariables} min-h-screen font-body antialiased`}>
         <ErrorBoundary>{children}</ErrorBoundary>
       </body>
     </html>

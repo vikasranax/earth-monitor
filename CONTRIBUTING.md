@@ -1,26 +1,57 @@
-#### F38 · `CONTRIBUTING.md`
+# Contributing to Earth Monitor
 
-````md
-# Contributing to JAGAT-MANTHAN
+Thanks for wanting to help build जगत्-मन्थन · Earth Monitor — a real-time, open-source global intelligence terminal.
 
-## Workflow
+## Getting started
 
-1. Modules ship in strict order (M01 → M13). Never start M(N+1) with M(N) unverified.
-2. Branch per module or feature: `feat/m02-statusbar`, `fix/m01-csp-typo`.
-3. Conventional commits: `feat(m02): add ticker component`, `test(m01): env contract`, `docs(m01): runbook`.
-4. Squash-merge PRs. CI must be green: lint · typecheck · unit tests · build · secret audit.
-
-## Conventions
-
-- TypeScript strict; no `any` without a written justification in the PR.
-- Server data access only through `src/services/*` adapters (from M03).
-- Client env only through `src/lib/env.public.ts`; server env only through `src/lib/env.ts`.
-- Colors only via semantic tokens (`text-muted`, `bg-panel`, `border-line`…) — never raw hex in components.
-- Every new feature ships with tests and a docs update in the same PR.
-
-## Local quality gate
+1. Fork the repo, then clone your fork:
 
 ```bash
-pnpm quality
+   git clone https://github.com/<your-username>/earth-monitor.git
+   cd earth-monitor
 ```
-````
+
+2. Install dependencies:
+
+```bash
+   pnpm install
+```
+
+3. Copy the env file (everything's optional at early modules):
+
+```bash
+   cp .env.example .env.local
+```
+
+4. Start the dev server:
+
+```bash
+   pnpm dev
+```
+
+## Before opening a PR
+
+Run the full quality gate locally:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test:unit
+pnpm build
+```
+
+All four must pass — this is the same gate CI runs automatically on your PR.
+
+## Project structure
+
+The project is built in numbered modules (M01, M02, M03…) — see `docs/` for specs on each module and `docs/VISION-AND-TRACKING.md` for the overall roadmap. Check open issues labeled `good first issue` if you're new.
+
+## Code style
+
+- TypeScript, strict mode
+- Prettier formatting (`pnpm format` before committing)
+- Components go in `src/components/`, following the existing terminal design system in `src/components/terminal/`
+
+## License
+
+By contributing, you agree your contributions will be licensed under the project's AGPL-3.0 license.
