@@ -4,6 +4,7 @@ import { fontVariables } from "@/lib/fonts";
 import { serverEnv } from "@/lib/env";
 import { ErrorBoundary } from "@/components/error-boundary";
 import "./global.css";
+import "leaflet/dist/leaflet.css"; // ← add this here
 
 export const metadata: Metadata = {
   metadataBase: new URL(serverEnv.SITE_URL),
