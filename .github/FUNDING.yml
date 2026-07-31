@@ -1,9 +1,7 @@
-# These are supported funding model platforms
-
-upi: vrx@upi
 patreon: vikasranax
 buy_me_a_coffee: vikasrana
-#open_collective: # Replace with a single Open Collective username
+open_collective: vikasrana
+open_collective: earth-monitor
 #ko_fi: # Replace with a single Ko-fi username
 #tidelift: # Replace with a single Tidelift platform-name/package-name e.g., npm/babel
 #community_bridge: # Replace with a single Community Bridge project-name e.g., cloud-foundry
