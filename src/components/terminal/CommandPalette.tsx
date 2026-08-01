@@ -16,8 +16,7 @@ interface CommandItem {
 }
 
 export function CommandPalette() {
-  const { commandPaletteOpen, setCommandPaletteOpen, toggleCommandPalette } =
-    useSettingsStore();
+  const { commandPaletteOpen, setCommandPaletteOpen, toggleCommandPalette } = useSettingsStore();
   const [query, setQuery] = useState("");
   const router = useRouter();
 
@@ -35,14 +34,24 @@ export function CommandPalette() {
       { id: "home", label: "Go to Home Command Deck", hint: "G H", action: () => router.push("/") },
       { id: "map", label: "Go to Global Map", hint: "G M", action: () => router.push("/map") },
       { id: "news", label: "Go to News Engine", hint: "G N", action: () => router.push("/news") },
-      { id: "design", label: "Go to Design Showcase", hint: "", action: () => router.push("/design") },
+      {
+        id: "design",
+        label: "Go to Design Showcase",
+        hint: "",
+        action: () => router.push("/design"),
+      },
+      { id: "markets", label: "Go to Markets", hint: "", action: () => router.push("/markets") },
+      {
+        id: "shipping",
+        label: "Go to Shipping & Straits",
+        hint: "",
+        action: () => router.push("/shipping"),
+      },
     ],
     [router],
   );
 
-  const filtered = commands.filter((c) =>
-    c.label.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filtered = commands.filter((c) => c.label.toLowerCase().includes(query.toLowerCase()));
 
   function run(cmd: CommandItem) {
     cmd.action();
