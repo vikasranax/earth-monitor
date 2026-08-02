@@ -47,6 +47,7 @@ export function CommandPalette() {
         hint: "",
         action: () => router.push("/shipping"),
       },
+      { id: "airspace", label: "Go to Airspace", hint: "", action: () => router.push("/airspace") },
     ],
     [router],
   );
