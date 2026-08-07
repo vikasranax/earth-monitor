@@ -37,26 +37,31 @@ function stripHtml(input: string): string {
   return input.replace(/<[^>]*>/g, "").trim();
 }
 
-export async function fetchGuardianNews(): Promise<NewsFetchResult> {
-  if (!serverEnv.GUARDIAN_API_KEY) {
+export async function fetchGuardianNews(query?: string): Promise<NewsFetchResult> {
+  const apiKey = serverEnv.GUARDIAN_API_KEY;
+  if (!apiKey) {
     return { armed: false, articles: [], cached: false };
   }
 
   const rate = await checkRateLimit(PROVIDER_ID, 12, 60);
   if (!rate.success) {
-    return {
-      armed: true,
-      articles: [],
-      cached: false,
-      error: "Rate limit reached — try again shortly.",
-    };
+    return { armed: true, articles: [], cached: false, error: "Rate limit reached — try again shortly." };
   }
+
+  const cacheKey = `news:guardian:${query ?? "latest"}`;
 
   try {
     const { data, cached } = await fetchWithCache(
-      "news:guardian:latest",
+      cacheKey,
       async () => {
-        const url = `https://content.guardianapis.com/search?api-key=${serverEnv.GUARDIAN_API_KEY}&order-by=newest&page-size=20&show-fields=trailText`;
+        const params = new URLSearchParams({
+          "api-key": apiKey,
+          "order-by": "newest",
+          "page-size": "20",
+          "show-fields": "trailText",
+        });
+        if (query) params.set("q", query);
+        const url = `https://content.guardianapis.com/search?${params.toString()}`;
         const res = await fetch(url);
         if (!res.ok) throw new Error(`Guardian API responded ${res.status}`);
         const json = (await res.json()) as GuardianApiResponse;

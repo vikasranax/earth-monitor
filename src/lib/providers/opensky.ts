@@ -34,7 +34,9 @@ function isWithinBox(lat: number, lon: number, box: [[number, number], [number, 
 }
 
 export async function fetchAirspaceSnapshot(): Promise<AirspaceFetchResult> {
-  const authenticated = Boolean(serverEnv.OPENSKY_USER && serverEnv.OPENSKY_PASS);
+  const username = serverEnv.OPENSKY_USER;
+  const password = serverEnv.OPENSKY_PASS;
+  const authenticated = Boolean(username && password);
 
   const rate = await checkRateLimit(PROVIDER_ID, authenticated ? 20 : 4, 60);
   if (!rate.success) {
@@ -52,12 +54,12 @@ export async function fetchAirspaceSnapshot(): Promise<AirspaceFetchResult> {
       "airspace:opensky:global",
       async () => {
         const headers: HeadersInit = {};
+
         if (authenticated) {
-          const basic = Buffer.from(`${serverEnv.OPENSKY_USER}:${serverEnv.OPENSKY_PASS}`).toString(
-            "base64",
-          );
-          headers.Authorization = `Basic ${basic}`;
+          const auth = Buffer.from(`${username}:${password}`).toString("base64");
+          headers.Authorization = `Basic ${auth}`;
         }
+
         const res = await fetch("https://opensky-network.org/api/states/all", { headers });
         if (!res.ok) throw new Error(`OpenSky API responded ${res.status}`);
         const json = (await res.json()) as { states: Array<Array<unknown>> | null };
