@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { StatusBar, CommandPalette } from "@/components/terminal";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CountryDossier } from "@/components/map/CountryDossier";
-import { LayerToggle } from "@/components/map/LayerToggle";
+import { cableLandings } from "@/lib/cable-landings";
 import type { Country } from "@/lib/countries";
 
 const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
@@ -13,33 +13,111 @@ const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) =>
   loading: () => <div className="h-full w-full bg-[var(--bg-1)]" />,
 });
 
+interface QuakeEvent {
+  id: string;
+  place: string;
+  magnitude: number;
+  lat: number;
+  lng: number;
+  depth: number;
+  time: string;
+}
+
+function LayerToggle({
+  label,
+  active,
+  onToggle,
+}: {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"}`}
+    >
+      <span>{label}</span>
+      <span
+        className="w-2 h-2 rounded-full"
+        style={{ background: active ? "var(--accent)" : "var(--fg-muted)" }}
+      />
+    </button>
+  );
+}
+
 export default function MapPage() {
   const [selected, setSelected] = useState<Country | null>(null);
   const [showDisputed, setShowDisputed] = useState(true);
   const [showUnrest, setShowUnrest] = useState(false);
+  const [showQuakes, setShowQuakes] = useState(false);
+  const [showCables, setShowCables] = useState(false);
+  const [quakes, setQuakes] = useState<QuakeEvent[]>([]);
+  const [loadingQuakes, setLoadingQuakes] = useState(false);
+
+  const handleToggleQuakes = async () => {
+    const next = !showQuakes;
+    setShowQuakes(next);
+    if (next && quakes.length === 0) {
+      setLoadingQuakes(true);
+      try {
+        const res = await fetch("/api/quakes");
+        if (res.ok) {
+          const data = await res.json();
+          setQuakes(data.events || []);
+        }
+      } catch {
+      } finally {
+        setLoadingQuakes(false);
+      }
+    }
+  };
 
   return (
     <ThemeProvider>
       <div className="min-h-screen flex flex-col bg-[var(--bg-0)]">
         <StatusBar />
-        <LayerToggle
-          showDisputed={showDisputed}
-          showUnrest={showUnrest}
-          onToggleDisputed={() => setShowDisputed((v) => !v)}
-          onToggleUnrest={() => setShowUnrest((v) => !v)}
-        />
-        <main className="flex-1 flex flex-col md:flex-row gap-4 p-4 max-w-7xl mx-auto w-full">
-          <div className="flex-1 h-[600px] rounded-[var(--radius-md)] overflow-hidden border border-[var(--border)]">
+        <div className="flex-1 flex flex-col md:flex-row gap-0">
+          <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">
+              Map Layers
+            </div>
+            <LayerToggle
+              label="Disputed Territories"
+              active={showDisputed}
+              onToggle={() => setShowDisputed((v) => !v)}
+            />
+            <LayerToggle
+              label="Civil Unrest (Sample)"
+              active={showUnrest}
+              onToggle={() => setShowUnrest((v) => !v)}
+            />
+            <LayerToggle
+              label={`Earthquakes ${loadingQuakes ? "(loading…)" : ""}`}
+              active={showQuakes}
+              onToggle={handleToggleQuakes}
+            />
+            <LayerToggle
+              label="Submarine Cables"
+              active={showCables}
+              onToggle={() => setShowCables((v) => !v)}
+            />
+            <div className="mt-auto pt-4 border-t border-[var(--border)]">
+              <CountryDossier country={selected} />
+            </div>
+          </div>
+          <div className="flex-1 h-[500px] md:h-auto relative">
             <WorldMap
               onSelectCountry={setSelected}
               showDisputed={showDisputed}
               showUnrest={showUnrest}
+              showQuakes={showQuakes}
+              quakes={quakes}
+              showCables={showCables}
+              cableLandings={cableLandings}
             />
           </div>
-          <div className="w-full md:w-80 shrink-0">
-            <CountryDossier country={selected} />
-          </div>
-        </main>
+        </div>
         <CommandPalette />
       </div>
     </ThemeProvider>
