@@ -1,74 +1,53 @@
-import { fetchGuardianNews } from "@/lib/providers/guardian";
-import { ThemeProvider } from "@/components/theme-provider";
-import { StatusBar, CommandPalette, Panel, LedBadge } from "@/components/terminal";
+import { fetchAllNews } from "@/lib/providers/news";
+
+export const dynamic = "force-dynamic";
 
 export default async function NewsPage() {
-  const result = await fetchGuardianNews();
+  const { articles, error } = await fetchAllNews();
 
   return (
-    <ThemeProvider>
-      <div className="min-h-screen flex flex-col bg-[var(--bg-0)]">
-        <StatusBar />
-        <main className="flex-1 p-4 max-w-4xl mx-auto w-full flex flex-col gap-4">
-          <Panel
-            title="News Wire"
-            eyebrow="GUARDIAN API"
-            actions={
-              <LedBadge
-                status={result.armed ? (result.error ? "warn" : "ok") : "idle"}
-                label={result.armed ? (result.cached ? "CACHED" : "LIVE") : "NOT ARMED"}
-                pulse={result.armed && !result.error}
-              />
-            }
-          >
-            {!result.armed && (
-              <p className="text-sm text-[var(--fg-2)] font-mono">
-                GUARDIAN_API_KEY isn&apos;t set. Get a free key at{" "}
-                <a
-                  href="https://open-platform.theguardian.com"
-                  className="text-[var(--accent)] underline"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  open-platform.theguardian.com
-                </a>{" "}
-                and add it to .env.local to arm this provider.
-              </p>
-            )}
-            {result.armed && result.error && (
-              <p className="text-sm text-[var(--danger)] font-mono">{result.error}</p>
-            )}
-            {result.armed && !result.error && result.articles.length === 0 && (
-              <p className="text-sm text-[var(--fg-2)] font-mono">No articles returned.</p>
-            )}
-            <div className="flex flex-col gap-3 mt-2">
-              {result.articles.map((a) => (
-                <a
-                  key={a.id}
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block border-b border-[var(--border)] pb-3 last:border-0 hover:bg-[var(--bg-2)] transition-colors -mx-2 px-2 rounded-[var(--radius-sm)]"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--accent)]">
-                      {a.section}
-                    </span>
-                    <span className="font-mono text-[10px] text-[var(--fg-muted)]">
-                      {new Date(a.publishedAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-base font-semibold text-[var(--fg-0)]">
-                    {a.title}
-                  </h3>
-                  {a.trailText && <p className="text-sm text-[var(--fg-1)] mt-1">{a.trailText}</p>}
-                </a>
-              ))}
-            </div>
-          </Panel>
-        </main>
-        <CommandPalette />
+    <main className="min-h-screen bg-[#05070a] text-[#e6ebf1] p-6">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2 font-[family-name:var(--font-display)]">
+          News Wire
+        </h1>
+        <p className="text-[#a8b3c1] mb-8 text-sm">
+          Guardian API + Indian RSS — merged, deduplicated, sorted live.
+        </p>
+
+        {error && (
+          <div className="mb-6 p-4 border border-[#ff4d4f]/30 bg-[#ff4d4f]/10 rounded text-[#ff4d4f] text-sm">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {articles.map((article) => (
+            <a
+              key={article.id}
+              href={article.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block p-5 rounded-lg border border-[#212832] bg-[#0a0d12] hover:bg-[#10151c] transition-colors"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-[10px] uppercase tracking-wider text-[#ff7a1a] font-mono">
+                  {article.source}
+                </span>
+                <span className="text-[10px] text-[#454e59] font-mono">
+                  {new Date(article.publishedAt).toLocaleString()}
+                </span>
+              </div>
+              <h2 className="text-lg font-semibold text-[#e6ebf1] mb-1">{article.title}</h2>
+              <p className="text-sm text-[#a8b3c1] line-clamp-2">{article.summary}</p>
+            </a>
+          ))}
+
+          {articles.length === 0 && !error && (
+            <p className="text-[#6b7684] text-sm">No articles available right now.</p>
+          )}
+        </div>
       </div>
-    </ThemeProvider>
+    </main>
   );
 }

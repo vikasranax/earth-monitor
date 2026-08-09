@@ -48,6 +48,15 @@ export function CommandPalette() {
         action: () => router.push("/shipping"),
       },
       { id: "airspace", label: "Go to Airspace", hint: "", action: () => router.push("/airspace") },
+      {
+        id: "copilot",
+        label: "Open AI Copilot",
+        shortcut: "⌘⇧C",
+        action: () => {
+          // Dispatch a custom event that CopilotButton listens for
+          window.dispatchEvent(new CustomEvent("open-copilot"));
+        },
+      },
     ],
     [router],
   );
