@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { fetchAllNews } from "@/lib/providers/news";
-import { fetchMarketQuotes, fetchQuote, searchSymbol } from "@/lib/providers/twelvedata";
+import { fetchMarketQuotes, fetchQuote } from "@/lib/providers/twelvedata";
 
 export const runtime = "edge";
 
@@ -139,9 +139,9 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
       { role: "user", content: message },
     ];
 
-    console.log("[COPILOT] Provider:", IS_GROQ ? "Groq" : "OpenAI");
-    console.log("[COPILOT] Endpoint:", AI_BASE_URL);
-    console.log("[COPILOT] Model:", AI_MODEL);
+    console.warn("[COPILOT] Endpoint:", AI_BASE_URL);
+    console.warn("[COPILOT] Model:", AI_MODEL);
+    console.warn("[COPILOT] Provider:", IS_GROQ ? "Groq" : "OpenAI");
 
     const aiRes = await fetch(`${AI_BASE_URL}/chat/completions`, {
       method: "POST",
