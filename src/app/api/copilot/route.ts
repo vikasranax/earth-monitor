@@ -1,12 +1,10 @@
 import type { NextRequest } from "next/server";
 import { fetchAllNews } from "@/lib/providers/news";
+import { fetchMarketQuotes, fetchQuote, searchSymbol } from "@/lib/providers/twelvedata";
 
 export const runtime = "edge";
 
-/* ── AI Gateway config ────────────────────────────────────── */
 const RAW_KEY = process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || "";
-
-// Auto-detect provider from key prefix
 const IS_GROQ = RAW_KEY.startsWith("gsk_");
 const AI_API_KEY = RAW_KEY;
 const AI_BASE_URL =
@@ -14,16 +12,21 @@ const AI_BASE_URL =
   (IS_GROQ ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1");
 const AI_MODEL = process.env.AI_MODEL || (IS_GROQ ? "llama-3.3-70b-versatile" : "gpt-4o-mini");
 
-/* ── Intent detection ─────────────────────────────────────── */
 function detectIntent(message: string): "news" | "markets" | "general" {
   const m = message.toLowerCase();
   if (/\b(news|headlines|happening|going on|report|article|updates?)\b/.test(m)) return "news";
-  if (/\b(market|stock|price|crypto|bitcoin|oil|gold|fx|forex)\b/.test(m)) return "markets";
+  if (
+    /\b(market|stock|price|crypto|bitcoin|oil|gold|fx|forex|trading|index|nasdaq|sp500|s&p|equity|share|rupee|rupees|nifty|sensex|dollar|yen|won|yuan|renminbi|ether|inr|riyal|dirham|shekel|real|peso|loonie|ruble|rouble|rand|naira|pound|sterling|euro|bovespa|merval|nikkei|kospi|dax|cac|ftse|ibex|mib|jse|sti|klci|psei|jci|set|ipc)\b/.test(
+      m,
+    )
+  )
+    return "markets";
   return "general";
 }
 
-/* ── Fetch grounding context ──────────────────────────────── */
+/* ── Build grounding context ──────────────────────────────── */
 async function buildGrounding(intent: "news" | "markets" | "general", message: string) {
+  /* ── News ─────────────────────────────────────────────── */
   if (intent === "news") {
     const query = message.replace(/news|headlines|happening|updates?/gi, "").trim();
     const { articles } = await fetchAllNews(query || undefined);
@@ -44,9 +47,49 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
     return { context, citations };
   }
 
+  /* ── Markets ──────────────────────────────────────────── */
   if (intent === "markets") {
+    // 1. Try to find a specific symbol the user mentioned
+    const words = message.split(/\s+/);
+    const potentialSymbols = words.filter((w) => /^[A-Z]{1,5}$/i.test(w) || w.includes("/"));
+    const specificQuotes = [];
+
+    for (const sym of potentialSymbols.slice(0, 3)) {
+      const q = await fetchQuote(sym.toUpperCase());
+      if (q) specificQuotes.push(q);
+    }
+
+    // 2. Also fetch the broad watchlist
+    const { quotes: allQuotes } = await fetchMarketQuotes();
+
+    // Build context
+    const lines: string[] = [];
+
+    if (specificQuotes.length > 0) {
+      lines.push("--- SPECIFIC QUOTES ---");
+      for (const q of specificQuotes) {
+        const arrow = q.percentChange >= 0 ? "▲" : "▼";
+        lines.push(`${q.label} (${q.symbol}): ${q.price} ${arrow} ${q.percentChange.toFixed(2)}%`);
+      }
+    }
+
+    if (allQuotes.length > 0) {
+      lines.push("--- BROAD MARKET SNAPSHOT ---");
+      for (const q of allQuotes.slice(0, 12)) {
+        const arrow = q.percentChange >= 0 ? "▲" : "▼";
+        lines.push(`${q.label} (${q.symbol}): ${q.price} ${arrow} ${q.percentChange.toFixed(2)}%`);
+      }
+    }
+
+    if (lines.length === 0) {
+      return {
+        context: "Market data provider not armed (TWELVEDATA_API_KEY missing).",
+        citations: [],
+      };
+    }
+
     return {
-      context: "Live market data provider not yet wired (M07).",
+      context: lines.join("\n"),
       citations: [],
     };
   }
@@ -54,7 +97,7 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
   return { context: "", citations: [] };
 }
 
-/* ── Route handler ────────────────────────────────────────── */
+/* ── POST handler (keep your existing one, just swap buildGrounding) ── */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -72,7 +115,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (!AI_API_KEY) {
-      console.error("[COPILOT] No AI key found. Set GROQ_API_KEY or OPENAI_API_KEY in .env.local");
       return new Response(JSON.stringify({ error: "No AI API key configured. Check .env.local" }), {
         status: 503,
       });

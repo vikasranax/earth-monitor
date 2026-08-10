@@ -6,6 +6,7 @@ export interface NewsArticle {
   title: string;
   summary: string;
   source: string;
+  region: string;
   publishedAt: string;
   url: string;
 }
@@ -34,8 +35,54 @@ function normalizeDate(raw: string): string {
   return new Date().toISOString();
 }
 
-/* ── Indian RSS parser ────────────────────────────────────── */
-function parseRSSXml(xml: string, sourceName: string): NewsArticle[] {
+/* ── RSS Feeds ────────────────────────────────────────────── */
+const RSS_FEEDS = [
+  // South Asia
+  { name: "The Hindu", url: "https://www.thehindu.com/news/national/?service=rss", region: "IN" },
+  { name: "Indian Express", url: "https://indianexpress.com/feed/", region: "IN" },
+  { name: "NDTV", url: "https://feeds.feedburner.com/ndtvnews-top-stories", region: "IN" },
+
+  // East Asia
+  { name: "Japan Times", url: "https://www.japantimes.co.jp/feed/", region: "JP" },
+  { name: "SCMP", url: "https://www.scmp.com/rss/91/feed", region: "CN" },
+  {
+    name: "Korea Herald",
+    url: "http://www.koreaherald.com/common/rss_xml.php?ct=102",
+    region: "KR",
+  },
+  { name: "Pyongyang Times", url: "https://www.pyongyangtimes.com.kp/feeds/home", region: "NK" },
+
+  // South-East Asia
+  {
+    name: "Bangkok Post",
+    url: "https://www.bangkokpost.com/rss/data/topstories.xml",
+    region: "TH",
+  },
+  { name: "Straits Times", url: "https://www.straitstimes.com/news/asia/rss.xml", region: "SG" },
+
+  // Middle East
+  { name: "Al Jazeera", url: "https://www.aljazeera.com/xml/rss/all.xml", region: "QA" },
+  { name: "Middle East Eye", url: "https://www.middleeasteye.net/rss", region: "ME" },
+
+  // Europe & Russia
+  { name: "The Guardian", url: "https://www.theguardian.com/world/rss", region: "GB" },
+  { name: "BBC World", url: "http://feeds.bbci.co.uk/news/world/rss.xml", region: "GB" },
+  { name: "BBC Africa", url: "http://feeds.bbci.co.uk/news/world/africa/rss.xml", region: "AF" },
+  { name: "France24", url: "https://www.france24.com/en/rss", region: "FR" },
+  { name: "Deutsche Welle", url: "https://rss.dw.com/rdf/rss-en-all", region: "DE" },
+  { name: "Moscow Times", url: "https://www.themoscowtimes.com/rss/news", region: "RU" },
+
+  // Americas
+  {
+    name: "NYT World",
+    url: "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+    region: "US",
+  },
+  { name: "Washington Post", url: "https://feeds.washingtonpost.com/rss/world", region: "US" },
+];
+
+/* ── RSS parser ───────────────────────────────────────────── */
+function parseRSSXml(xml: string, sourceName: string, region: string): NewsArticle[] {
   const items: NewsArticle[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
@@ -62,6 +109,7 @@ function parseRSSXml(xml: string, sourceName: string): NewsArticle[] {
       title,
       summary: cleanDesc,
       source: sourceName,
+      region,
       publishedAt: normalizeDate(pubDateRaw),
       url,
     });
@@ -70,13 +118,8 @@ function parseRSSXml(xml: string, sourceName: string): NewsArticle[] {
   return items;
 }
 
-const RSS_FEEDS = [
-  { name: "The Hindu", url: "https://www.thehindu.com/news/national/?service=rss" },
-  { name: "Indian Express", url: "https://indianexpress.com/feed/" },
-  { name: "NDTV", url: "https://feeds.feedburner.com/ndtvnews-top-stories" },
-];
-
-async function fetchIndianNews(): Promise<{ articles: NewsArticle[]; error?: string }> {
+/* ── Indian / Regional RSS fetch ──────────────────────────── */
+async function fetchRegionalNews(): Promise<{ articles: NewsArticle[]; error?: string }> {
   try {
     const results = await Promise.allSettled(
       RSS_FEEDS.map(async (feed) => {
@@ -85,11 +128,11 @@ async function fetchIndianNews(): Promise<{ articles: NewsArticle[]; error?: str
           next: { revalidate: 600 },
         });
         if (!res.ok) {
-          console.error(`[INDIAN NEWS] ${feed.name} failed: ${res.status}`);
+          console.error(`[NEWS] ${feed.name} failed: ${res.status}`);
           return [];
         }
         const xml = await res.text();
-        return parseRSSXml(xml, feed.name);
+        return parseRSSXml(xml, feed.name, feed.region);
       }),
     );
 
@@ -99,7 +142,7 @@ async function fetchIndianNews(): Promise<{ articles: NewsArticle[]; error?: str
 
     return {
       articles: all,
-      error: all.length === 0 ? "All Indian RSS feeds returned empty." : undefined,
+      error: all.length === 0 ? "All RSS feeds returned empty." : undefined,
     };
   } catch (err) {
     return {
@@ -122,7 +165,7 @@ interface GuardianResponse {
   response?: { results?: GuardianResult[] };
 }
 
-/* ── Guardian ─────────────────────────────────────────────── */
+/* ── Guardian fetch ───────────────────────────────────────── */
 async function fetchGuardian(query?: string): Promise<NewsArticle[]> {
   if (!GUARDIAN_API_KEY) {
     console.warn("[NEWS] GUARDIAN_API_KEY missing — skipping Guardian");
@@ -146,6 +189,7 @@ async function fetchGuardian(query?: string): Promise<NewsArticle[]> {
     title: r.webTitle || "Untitled",
     summary: r.fields?.trailText?.replace(/<[^>]+>/g, "") || "",
     source: "The Guardian",
+    region: "GB",
     publishedAt: r.webPublicationDate
       ? new Date(r.webPublicationDate).toISOString()
       : new Date().toISOString(),
@@ -155,24 +199,25 @@ async function fetchGuardian(query?: string): Promise<NewsArticle[]> {
 
 /* ── Unified export ───────────────────────────────────────── */
 export async function fetchAllNews(query?: string): Promise<NewsResult> {
-  const [guardianRes, indianRes] = await Promise.allSettled([
+  const [guardianRes, regionalRes] = await Promise.allSettled([
     fetchGuardian(query),
-    fetchIndianNews(),
+    fetchRegionalNews(),
   ]);
 
   const guardian = guardianRes.status === "fulfilled" ? guardianRes.value : [];
-  const indian = indianRes.status === "fulfilled" ? indianRes.value.articles : [];
+  const regional = regionalRes.status === "fulfilled" ? regionalRes.value.articles : [];
 
   if (guardianRes.status === "rejected")
     console.error("[NEWS] Guardian rejected:", guardianRes.reason);
-  if (indianRes.status === "rejected") console.error("[NEWS] Indian rejected:", indianRes.reason);
+  if (regionalRes.status === "rejected")
+    console.error("[NEWS] Regional rejected:", regionalRes.reason);
 
-  const merged = [...guardian, ...indian].sort(
+  const merged = [...guardian, ...regional].sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
   );
 
   return {
-    articles: merged.slice(0, 25),
+    articles: merged.slice(0, 30),
     cached: false,
     error: merged.length === 0 ? "All news sources returned empty." : undefined,
   };
