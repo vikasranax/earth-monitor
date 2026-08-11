@@ -43,34 +43,48 @@ const RSS_FEEDS = [
   { name: "NDTV", url: "https://feeds.feedburner.com/ndtvnews-top-stories", region: "IN" },
 
   // East Asia
-  { name: "Japan Times", url: "https://www.japantimes.co.jp/feed/", region: "JP" },
-  { name: "SCMP", url: "https://www.scmp.com/rss/91/feed", region: "CN" },
+  { name: "Japan Times", url: "https://www.japantimes.co.jp/feed", region: "JP" },
+  { name: "Japan Today", url: "https://japantoday.com/feed/atom", region: "JP" },
+  { name: "China Daily", url: "https://www.chinadaily.com.cn/rss/china_rss.xml", region: "CN" },
+  { name: "ECNS China", url: "https://www.ecns.cn/rss/rss.xml", region: "CN" },
   {
     name: "Korea Herald",
-    url: "http://www.koreaherald.com/common/rss_xml.php?ct=102",
+    url: "https://www.koreaherald.com/common/rss_xml.php?ct=102",
     region: "KR",
   },
-  { name: "Pyongyang Times", url: "https://www.pyongyangtimes.com.kp/feeds/home", region: "NK" },
 
   // South-East Asia
-  {
-    name: "Bangkok Post",
-    url: "https://www.bangkokpost.com/rss/data/topstories.xml",
-    region: "TH",
-  },
   { name: "Straits Times", url: "https://www.straitstimes.com/news/asia/rss.xml", region: "SG" },
 
   // Middle East
   { name: "Al Jazeera", url: "https://www.aljazeera.com/xml/rss/all.xml", region: "QA" },
+  { name: "Jerusalem Post", url: "https://www.jpost.com/rss/rssfeedsinternational", region: "IL" },
   { name: "Middle East Eye", url: "https://www.middleeasteye.net/rss", region: "ME" },
 
-  // Europe & Russia
+  // Europe
   { name: "The Guardian", url: "https://www.theguardian.com/world/rss", region: "GB" },
-  { name: "BBC World", url: "http://feeds.bbci.co.uk/news/world/rss.xml", region: "GB" },
-  { name: "BBC Africa", url: "http://feeds.bbci.co.uk/news/world/africa/rss.xml", region: "AF" },
-  { name: "France24", url: "https://www.france24.com/en/rss", region: "FR" },
-  { name: "Deutsche Welle", url: "https://rss.dw.com/rdf/rss-en-all", region: "DE" },
+  { name: "BBC World", url: "https://feeds.bbci.co.uk/news/world/rss.xml", region: "GB" },
+  { name: "Euronews", url: "https://www.euronews.com/rss", region: "EU" },
+  { name: "Politico Europe", url: "https://www.politico.eu/feed/", region: "EU" },
+  { name: "EUobserver", url: "https://euobserver.com/feed", region: "EU" },
+  {
+    name: "Le Monde Int'l",
+    url: "https://www.lemonde.fr/en/international/rss_full.xml",
+    region: "FR",
+  },
   { name: "Moscow Times", url: "https://www.themoscowtimes.com/rss/news", region: "RU" },
+
+  // Africa
+  { name: "BBC Africa", url: "https://feeds.bbci.co.uk/news/world/africa/rss.xml", region: "AF" },
+  {
+    name: "AllAfrica",
+    url: "https://allafrica.com/tools/headlines/rdf/latest/headlines.rdf",
+    region: "AF",
+  },
+
+  // North Korea
+  { name: "NK News", url: "https://www.nknews.org/feed/", region: "NK" },
+  { name: "38 North", url: "https://www.38north.org/feed/", region: "NK" },
 
   // Americas
   {
@@ -82,37 +96,59 @@ const RSS_FEEDS = [
 ];
 
 /* ── RSS parser ───────────────────────────────────────────── */
+function parseItem(
+  itemXml: string,
+  sourceName: string,
+  region: string,
+  index: number,
+): NewsArticle | null {
+  if (!itemXml) return null;
+
+  const titleMatch = itemXml.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
+  const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
+  const linkHrefMatch = itemXml.match(/<link[^>]+href="([^"]+)"/);
+  const descMatch = itemXml.match(
+    /<(?:description|summary)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:description|summary)>/,
+  );
+  const dateMatch = itemXml.match(/<(?:pubDate|updated)>([\s\S]*?)<\/(?:pubDate|updated)>/);
+
+  const title = titleMatch?.[1]?.trim() || "Untitled";
+  const url = linkMatch?.[1]?.trim() || linkHrefMatch?.[1]?.trim() || "#";
+  const description = descMatch?.[1]?.trim() || "";
+  const pubDateRaw = dateMatch?.[1]?.trim() || "";
+  const cleanDesc = description.replace(/<[^>]+>/g, "").slice(0, 200);
+
+  return {
+    id: `${sourceName}-${index}`,
+    title,
+    summary: cleanDesc,
+    source: sourceName,
+    region,
+    publishedAt: normalizeDate(pubDateRaw),
+    url,
+  };
+}
+
 function parseRSSXml(xml: string, sourceName: string, region: string): NewsArticle[] {
   const items: NewsArticle[] = [];
+
+  // Try RSS <item> first
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
-
   while ((match = itemRegex.exec(xml)) !== null && items.length < 8) {
-    const itemXml = match[1];
-    if (!itemXml) continue;
+    if (!match[1]) continue;
+    const item = parseItem(match[1], sourceName, region, items.length);
+    if (item) items.push(item);
+  }
 
-    const titleMatch = itemXml.match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/);
-    const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
-    const descMatch = itemXml.match(
-      /<description>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/description>/,
-    );
-    const dateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-
-    const title = titleMatch?.[1]?.trim() || "Untitled";
-    const url = linkMatch?.[1]?.trim() || "#";
-    const description = descMatch?.[1]?.trim() || "";
-    const pubDateRaw = dateMatch?.[1]?.trim() || "";
-    const cleanDesc = description.replace(/<[^>]+>/g, "").slice(0, 200);
-
-    items.push({
-      id: `${sourceName}-${items.length}`,
-      title,
-      summary: cleanDesc,
-      source: sourceName,
-      region,
-      publishedAt: normalizeDate(pubDateRaw),
-      url,
-    });
+  // Fallback to Atom <entry>
+  if (items.length === 0) {
+    const entryRegex = /<entry>([\s\S]*?)<\/entry>/g;
+    while ((match = entryRegex.exec(xml)) !== null && items.length < 8) {
+      if (!match[1]) continue;
+      const item = parseItem(match[1], sourceName, region, items.length);
+      if (item) items.push(item);
+    }
   }
 
   return items;
@@ -124,11 +160,15 @@ async function fetchRegionalNews(): Promise<{ articles: NewsArticle[]; error?: s
     const results = await Promise.allSettled(
       RSS_FEEDS.map(async (feed) => {
         const res = await fetch(feed.url, {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; EarthMonitor/1.0)" },
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            Accept: "application/rss+xml, application/xml, text/xml, */*",
+          },
           next: { revalidate: 600 },
         });
         if (!res.ok) {
-          console.error(`[NEWS] ${feed.name} failed: ${res.status}`);
+          console.warn(`[NEWS] ${feed.name} failed: ${res.status}`);
           return [];
         }
         const xml = await res.text();
