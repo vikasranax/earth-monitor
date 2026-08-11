@@ -8,7 +8,7 @@ export interface WatchlistSymbol {
 }
 
 export const watchlist: WatchlistSymbol[] = [
-  // ════════ SOUTH ASIA ════════
+  // ════════ INDIA ════════
   {
     symbol: "INDA",
     label: "Nifty 50",
@@ -60,6 +60,22 @@ export const watchlist: WatchlistSymbol[] = [
     currency: "USD",
   },
   {
+    symbol: "EWH",
+    label: "Hong Kong Hang Seng",
+    category: "index",
+    region: "CN",
+    regionName: "Hong Kong",
+    currency: "USD",
+  },
+  {
+    symbol: "EWT",
+    label: "Taiwan MSCI",
+    category: "index",
+    region: "CN",
+    regionName: "Taiwan",
+    currency: "USD",
+  },
+  {
     symbol: "EWJ",
     label: "Japan Nikkei",
     category: "index",
@@ -100,7 +116,7 @@ export const watchlist: WatchlistSymbol[] = [
     currency: "KRW",
   },
 
-  // ════════ SOUTH-EAST ASIA ════════
+  // ════════ SOUTH-EAST ASIA & PACIFIC ════════
   {
     symbol: "EWS",
     label: "Singapore STI",
@@ -113,7 +129,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "EWM",
     label: "Malaysia KLCI",
     category: "index",
-    region: "MY",
+    region: "SG",
     regionName: "Malaysia",
     currency: "USD",
   },
@@ -121,7 +137,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "EPHE",
     label: "Philippines PSEi",
     category: "index",
-    region: "PH",
+    region: "SG",
     regionName: "Philippines",
     currency: "USD",
   },
@@ -129,7 +145,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "IDX",
     label: "Indonesia JCI",
     category: "index",
-    region: "ID",
+    region: "SG",
     regionName: "Indonesia",
     currency: "USD",
   },
@@ -137,8 +153,24 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "THD",
     label: "Thailand SET",
     category: "index",
-    region: "TH",
+    region: "SG",
     regionName: "Thailand",
+    currency: "USD",
+  },
+  {
+    symbol: "EWA",
+    label: "Australia ASX",
+    category: "index",
+    region: "AS",
+    regionName: "Australia",
+    currency: "USD",
+  },
+  {
+    symbol: "ENZL",
+    label: "New Zealand NZX",
+    category: "index",
+    region: "AS",
+    regionName: "New Zealand",
     currency: "USD",
   },
   {
@@ -148,6 +180,14 @@ export const watchlist: WatchlistSymbol[] = [
     region: "SG",
     regionName: "Singapore",
     currency: "SGD",
+  },
+  {
+    symbol: "USD/AUD",
+    label: "USD/AUD",
+    category: "forex",
+    region: "AS",
+    regionName: "Australia",
+    currency: "AUD",
   },
 
   // ════════ MIDDLE EAST ════════
@@ -163,7 +203,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "USD/SAR",
     label: "USD/SAR",
     category: "forex",
-    region: "SA",
+    region: "ME",
     regionName: "Saudi Arabia",
     currency: "SAR",
   },
@@ -171,7 +211,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "USD/AED",
     label: "USD/AED",
     category: "forex",
-    region: "AE",
+    region: "ME",
     regionName: "UAE",
     currency: "AED",
   },
@@ -434,7 +474,7 @@ export const watchlist: WatchlistSymbol[] = [
 
   // ════════ CRYPTO (Global) ════════
   {
-    symbol: "BTC/USD",
+    symbol: "BTC-USD",
     label: "Bitcoin",
     category: "crypto",
     region: "GL",
@@ -442,8 +482,48 @@ export const watchlist: WatchlistSymbol[] = [
     currency: "USD",
   },
   {
-    symbol: "ETH/USD",
+    symbol: "ETH-USD",
     label: "Ethereum",
+    category: "crypto",
+    region: "GL",
+    regionName: "Global",
+    currency: "USD",
+  },
+  {
+    symbol: "SOL-USD",
+    label: "Solana",
+    category: "crypto",
+    region: "GL",
+    regionName: "Global",
+    currency: "USD",
+  },
+  {
+    symbol: "WLD-USD",
+    label: "Worldcoin",
+    category: "crypto",
+    region: "GL",
+    regionName: "Global",
+    currency: "USD",
+  },
+  {
+    symbol: "XRP-USD",
+    label: "Ripple",
+    category: "crypto",
+    region: "GL",
+    regionName: "Global",
+    currency: "USD",
+  },
+  {
+    symbol: "ADA-USD",
+    label: "Cardano",
+    category: "crypto",
+    region: "GL",
+    regionName: "Global",
+    currency: "USD",
+  },
+  {
+    symbol: "DOGE-USD",
+    label: "Dogecoin",
     category: "crypto",
     region: "GL",
     regionName: "Global",
@@ -510,7 +590,7 @@ export const watchlist: WatchlistSymbol[] = [
 ];
 
 // ═══════════════════════════════════════════════════════════════════
-//  SYMBOL ALIAS MAP — natural language → symbol resolution
+//  SYMBOL ALIAS MAP
 // ═══════════════════════════════════════════════════════════════════
 export const symbolMap = new Map<string, WatchlistSymbol>(
   watchlist.flatMap((w) => {
@@ -562,31 +642,49 @@ export const symbolMap = new Map<string, WatchlistSymbol>(
     if (w.symbol === "SLV") keys.push("SILVER", "XAG");
     if (w.symbol === "USO") keys.push("OIL", "WTI", "CRUDE", "PETROL", "BRENT");
     if (w.symbol === "UNG") keys.push("GAS", "NATGAS");
-    if (w.symbol === "BTC/USD") keys.push("BTC", "BITCOIN", "CRYPTO");
-    if (w.symbol === "ETH/USD") keys.push("ETH", "ETHEREUM", "ETHER");
+    if (w.symbol === "BTC-USD") keys.push("BTC", "BITCOIN", "CRYPTO");
+    if (w.symbol === "ETH-USD") keys.push("ETH", "ETHEREUM", "ETHER");
+    if (w.symbol === "SOL-USD") keys.push("SOL", "SOLANA");
+    if (w.symbol === "WLD-USD") keys.push("WLD", "WORLDCOIN");
+    if (w.symbol === "XRP-USD") keys.push("XRP", "RIPPLE");
+    if (w.symbol === "ADA-USD") keys.push("ADA", "CARDANO");
+    if (w.symbol === "DOGE-USD") keys.push("DOGE", "DOGECOIN");
     if (w.symbol === "TSM") keys.push("TSMC", "TAIWAN", "TAIWANESE");
     if (w.symbol === "BABA") keys.push("ALIBABA", "CHINA TECH");
     if (w.symbol === "SHEL") keys.push("SHELL", "ROYAL DUTCH");
     if (w.symbol === "TTE") keys.push("TOTAL", "TOTALENERGIES", "FRENCH OIL");
+    if (w.symbol === "EWH") keys.push("HONG KONG", "HANG SENG", "HK");
+    if (w.symbol === "EWT") keys.push("TAIWAN", "TAIWANESE");
+    if (w.symbol === "EWA") keys.push("AUSTRALIA", "AUSTRALIAN", "ASX");
+    if (w.symbol === "ENZL") keys.push("NEW ZEALAND", "NZ", "NZX");
     return keys.map((k) => [k, w]);
   }),
 );
 
-// Region groups for UI filtering
+// Region groups for UI
 export const regions = [
-  { code: "IN", name: "India & South Asia", color: "#ff7a1a" },
-  { code: "CN", name: "China", color: "#ff4d4f" },
+  { code: "IN", name: "India", color: "#ff7a1a" },
+  { code: "CN", name: "China & Greater China", color: "#ff4d4f" },
   { code: "JP", name: "Japan", color: "#f5c542" },
   { code: "KR", name: "South Korea", color: "#3ba7ff" },
   { code: "SG", name: "South-East Asia", color: "#2ecc71" },
+  { code: "AS", name: "Australia & Pacific", color: "#2ecc71" },
   { code: "ME", name: "Middle East", color: "#8b7cf6" },
+  { code: "IL", name: "Israel", color: "#2ecc71" },
   { code: "EU", name: "European Union", color: "#3ba7ff" },
   { code: "GB", name: "United Kingdom", color: "#a8b3c1" },
+  { code: "FR", name: "France", color: "#3ba7ff" },
   { code: "RU", name: "Russia", color: "#ff4d4f" },
-  { code: "AF", name: "Africa", color: "#2ecc71" },
-  { code: "ZA", name: "South Africa", color: "#f5c542" },
   { code: "US", name: "United States", color: "#3ba7ff" },
-  { code: "BR", name: "Brazil & South America", color: "#2ecc71" },
-  { code: "MX", name: "Mexico & Central America", color: "#ff7a1a" },
-  { code: "GL", name: "Global / Commodities", color: "#e6ebf1" },
+  { code: "BR", name: "Brazil", color: "#2ecc71" },
+  { code: "MX", name: "Mexico", color: "#ff7a1a" },
+  { code: "ZA", name: "South Africa", color: "#f5c542" },
+  { code: "AF", name: "Africa", color: "#2ecc71" },
+  { code: "GL", name: "Global", color: "#e6ebf1" },
 ];
+
+// Asia-Pacific group (for page rendering) — JP + KR + SG + AS
+export const asiaRegions = ["JP", "KR", "SG", "AS"];
+
+// Supported currencies for conversion
+export const supportedCurrencies = ["USD", "INR", "EUR", "GBP", "JPY", "CNY", "SGD", "KRW"];

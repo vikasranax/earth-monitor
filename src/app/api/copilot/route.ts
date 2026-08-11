@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { fetchAllNews } from "@/lib/providers/news";
-import { fetchMarketQuotes, fetchQuote } from "@/lib/providers/twelvedata";
+import { fetchMarketQuotes, fetchQuote } from "@/lib/providers/yahoo-finance";
+import { symbolMap } from "@/lib/markets-watchlist";
 
 export const runtime = "edge";
 
@@ -49,62 +50,90 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
 
   /* ── Markets ──────────────────────────────────────────── */
   if (intent === "markets") {
-    // 1. Try to find a specific symbol the user mentioned
-    const words = message.split(/\s+/);
-    const potentialSymbols = words.filter((w) => /^[A-Z]{1,5}$/i.test(w) || w.includes("/"));
-    const specificQuotes = [];
+    const msgUpper = message.toUpperCase();
+    const matchedSymbols = new Set<string>();
 
-    for (const sym of potentialSymbols.slice(0, 3)) {
-      const q = await fetchQuote(sym.toUpperCase());
+    // Resolve via alias map
+    for (const [alias, item] of symbolMap.entries()) {
+      if (msgUpper.includes(alias)) matchedSymbols.add(item.symbol);
+    }
+
+    // Also check raw tokens
+    const rawTokens = msgUpper.split(/\s+/);
+    for (const t of rawTokens) {
+      const clean = t.replace(/[^A-Z./]/g, "");
+      if (clean && symbolMap.has(clean)) matchedSymbols.add(symbolMap.get(clean)!.symbol);
+    }
+
+    // Fetch specific matches
+    const specificQuotes = [];
+    for (const sym of Array.from(matchedSymbols).slice(0, 3)) {
+      const q = await fetchQuote(sym);
       if (q) specificQuotes.push(q);
     }
 
-    // 2. Also fetch the broad watchlist
+    // Fetch broad watchlist
     const { quotes: allQuotes } = await fetchMarketQuotes();
 
-    // Build context
     const lines: string[] = [];
 
     if (specificQuotes.length > 0) {
-      lines.push("--- SPECIFIC QUOTES ---");
+      lines.push("--- SPECIFIC ASSETS ---");
       for (const q of specificQuotes) {
         const arrow = q.percentChange >= 0 ? "▲" : "▼";
-        lines.push(`${q.label} (${q.symbol}): ${q.price} ${arrow} ${q.percentChange.toFixed(2)}%`);
+        lines.push(
+          `${q.label} (${q.symbol}): ${q.price.toFixed(2)} ${q.currency} ${arrow} ${q.percentChange.toFixed(2)}%`,
+        );
       }
     }
 
-    if (allQuotes.length > 0) {
-      lines.push("--- BROAD MARKET SNAPSHOT ---");
-      for (const q of allQuotes.slice(0, 12)) {
+    // Always include USD/INR + GLD for commodity context
+    const alwaysInclude = ["USD/INR", "GLD", "BTC/USD"];
+    const extras = allQuotes.filter(
+      (q) => alwaysInclude.includes(q.symbol) && !matchedSymbols.has(q.symbol),
+    );
+    if (extras.length > 0) {
+      lines.push("--- REFERENCE RATES ---");
+      for (const q of extras) {
         const arrow = q.percentChange >= 0 ? "▲" : "▼";
-        lines.push(`${q.label} (${q.symbol}): ${q.price} ${arrow} ${q.percentChange.toFixed(2)}%`);
+        lines.push(
+          `${q.label} (${q.symbol}): ${q.price.toFixed(2)} ${q.currency} ${arrow} ${q.percentChange.toFixed(2)}%`,
+        );
+      }
+    }
+
+    // Broad market snapshot
+    const broad = allQuotes
+      .filter((q) => !matchedSymbols.has(q.symbol) && !alwaysInclude.includes(q.symbol))
+      .slice(0, 12);
+    if (broad.length > 0) {
+      lines.push("--- BROAD MARKET ---");
+      for (const q of broad) {
+        const arrow = q.percentChange >= 0 ? "▲" : "▼";
+        lines.push(
+          `${q.label} (${q.symbol}): ${q.price.toFixed(2)} ${q.currency} ${arrow} ${q.percentChange.toFixed(2)}%`,
+        );
       }
     }
 
     if (lines.length === 0) {
-      return {
-        context: "Market data provider not armed (TWELVEDATA_API_KEY missing).",
-        citations: [],
-      };
+      return { context: "Market data temporarily unavailable.", citations: [] };
     }
 
-    return {
-      context: lines.join("\n"),
-      citations: [],
-    };
+    return { context: lines.join("\n"), citations: [] };
   }
 
   return { context: "", citations: [] };
 }
 
-/* ── POST handler (keep your existing one, just swap buildGrounding) ── */
+/* ── POST handler ────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const message = body?.message ?? body?.content ?? body?.text ?? body?.query ?? body?.prompt;
 
     if (!message || typeof message !== "string") {
-      console.error("[COPILOT] Bad body keys:", Object.keys(body));
+      console.warn("[COPILOT] Bad body keys:", Object.keys(body));
       return new Response(
         JSON.stringify({
           error: "Message required",
@@ -139,9 +168,8 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
       { role: "user", content: message },
     ];
 
-    console.warn("[COPILOT] Endpoint:", AI_BASE_URL);
-    console.warn("[COPILOT] Model:", AI_MODEL);
     console.warn("[COPILOT] Provider:", IS_GROQ ? "Groq" : "OpenAI");
+    console.warn("[COPILOT] Model:", AI_MODEL);
 
     const aiRes = await fetch(`${AI_BASE_URL}/chat/completions`, {
       method: "POST",
@@ -160,7 +188,7 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
-      console.error("[COPILOT] AI HTTP", aiRes.status, errText);
+      console.warn("[COPILOT] AI HTTP", aiRes.status, errText);
       return new Response(
         JSON.stringify({
           error: `AI service error ${aiRes.status}`,
@@ -178,7 +206,7 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
 
     return new Response(aiRes.body, { headers });
   } catch (err) {
-    console.error("[COPILOT] Unhandled error:", err);
+    console.warn("[COPILOT] Unhandled error:", err);
     return new Response(
       JSON.stringify({
         error: "Copilot error",
