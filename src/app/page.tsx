@@ -25,18 +25,19 @@ export default async function HomeCommandDeck() {
   }));
 
   const navItems = [
-    { href: "/dashboards", label: "Thematic Deck", icon: "◈", desc: "M10 · Unified view" },
-    { href: "/map", label: "Global Map", icon: "◎", desc: "M05 · Multilayer globe" },
-    { href: "/news", label: "News Wire", icon: "⚡", desc: "M06 · Guardian API" },
-    { href: "/markets", label: "Markets", icon: "$", desc: "M07 · TwelveData" },
-    { href: "/shipping", label: "Shipping", icon: "▣", desc: "M08 · AIS Stream" },
-    { href: "/airspace", label: "Airspace", icon: "✈", desc: "M09 · OpenSky" },
-    { href: "/hazard", label: "Hazard", icon: "▲", desc: "M09a · USGS" },
+    { href: "/dashboards", label: "Thematic Deck", icon: "◈", desc: "· Unified view" },
+    { href: "/map", label: "Global Map", icon: "◎", desc: "· Multilayer globe" },
+    { href: "/news", label: "News Wire", icon: "⚡", desc: "· Guardian API" },
+    { href: "/markets", label: "Markets", icon: "$", desc: "· TwelveData" },
+    { href: "/groups", label: "Groups", icon: "⊕", desc: "· G20 · BRICS · SCO" },
+    { href: "/shipping", label: "Shipping", icon: "▣", desc: "· AIS Stream" },
+    { href: "/airspace", label: "Airspace", icon: "✈", desc: "· OpenSky" },
+    { href: "/hazard", label: "Hazard", icon: "▲", desc: "· USGS" },
     {
       href: "/infrastructure",
       label: "Infrastructure",
       icon: "◉",
-      desc: "M09b · Cables & outages",
+      desc: "· Cables & outages",
     },
   ];
 

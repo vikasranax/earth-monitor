@@ -77,6 +77,16 @@ const domains: DomainStatus[] = [
     totalCount: 2,
     accent: "#8b7cf6",
   },
+  {
+    id: "groups",
+    label: "Groups",
+    href: "/groups",
+    icon: "⊕",
+    armed: true,
+    liveCount: 1,
+    totalCount: 1,
+    accent: "#f59e0b",
+  },
 ];
 
 function useClock() {
