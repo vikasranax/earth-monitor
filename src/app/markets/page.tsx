@@ -79,7 +79,7 @@ export default async function MarketsPage({ searchParams }: PageProps) {
     "IN",
     "CN",
     "ASIA",
-    "ME",
+    "WA",
     "IL",
     "EU",
     "GB",

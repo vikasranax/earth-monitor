@@ -190,20 +190,20 @@ export const watchlist: WatchlistSymbol[] = [
     currency: "AUD",
   },
 
-  // ════════ MIDDLE EAST ════════
+  // ════════ WEST ASIA ════════
   {
     symbol: "GAF",
-    label: "Middle East & Africa",
+    label: "West Asia & Africa",
     category: "index",
-    region: "ME",
-    regionName: "Middle East",
+    region: "WA",
+    regionName: "West Asia",
     currency: "USD",
   },
   {
     symbol: "USD/SAR",
     label: "USD/SAR",
     category: "forex",
-    region: "ME",
+    region: "WA",
     regionName: "Saudi Arabia",
     currency: "SAR",
   },
@@ -211,7 +211,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "USD/AED",
     label: "USD/AED",
     category: "forex",
-    region: "ME",
+    region: "WA",
     regionName: "UAE",
     currency: "AED",
   },
@@ -219,7 +219,7 @@ export const watchlist: WatchlistSymbol[] = [
     symbol: "USD/ILS",
     label: "USD/ILS",
     category: "forex",
-    region: "IL",
+    region: "WA",
     regionName: "Israel",
     currency: "ILS",
   },
@@ -609,7 +609,7 @@ export const symbolMap = new Map<string, WatchlistSymbol>(
     if (w.symbol === "EPHE") keys.push("PHILIPPINES", "MANILA", "PSE");
     if (w.symbol === "IDX") keys.push("INDONESIA", "JAKARTA", "JCI");
     if (w.symbol === "THD") keys.push("THAILAND", "BANGKOK", "SET");
-    if (w.symbol === "GAF") keys.push("MIDDLE EAST", "MENA", "GULF", "ARAB");
+    if (w.symbol === "GAF") keys.push("WEST ASIA", "MENA", "GULF", "ARAB");
     if (w.symbol === "USD/SAR") keys.push("RIYAL", "SAUDI");
     if (w.symbol === "USD/AED") keys.push("DIRHAM", "DUBAI", "UAE");
     if (w.symbol === "USD/ILS") keys.push("SHEKEL", "ISRAELI");
@@ -669,7 +669,7 @@ export const regions = [
   { code: "KR", name: "South Korea", color: "#3ba7ff" },
   { code: "SG", name: "South-East Asia", color: "#2ecc71" },
   { code: "AS", name: "Australia & Pacific", color: "#2ecc71" },
-  { code: "ME", name: "Middle East", color: "#8b7cf6" },
+  { code: "WA", name: "West Asia", color: "#8b7cf6" },
   { code: "IL", name: "Israel", color: "#2ecc71" },
   { code: "EU", name: "European Union", color: "#3ba7ff" },
   { code: "GB", name: "United Kingdom", color: "#a8b3c1" },

@@ -37,7 +37,7 @@ Earth Monitor tracks what's actually happening on the planet right now, grounded
 | South Asia      | The Hindu, Indian Express, NDTV, Dawn                           |
 | East Asia       | Japan Times, SCMP, Korea Herald                                 |
 | South-East Asia | Bangkok Post, Straits Times                                     |
-| Middle East     | Al Jazeera, Middle East Eye                                     |
+| West Asia       | Al Jazeera, Middle East Eye                                     |
 | Europe & Russia | The Guardian, BBC World, France24, Deutsche Welle, Moscow Times |
 | Africa          | BBC Africa                                                      |
 | Americas        | NYT World, Washington Post                                      |
@@ -47,7 +47,7 @@ Earth Monitor tracks what's actually happening on the planet right now, grounded
 - **South Asia:** Nifty 50, USD/INR, Reliance
 - **East Asia:** China Large-Cap, Nikkei, KOSPI, USD/CNY, USD/JPY
 - **South-East Asia:** STI, KLCI, PSEi, JCI, SET
-- **Middle East:** USD/SAR, USD/AED, USD/ILS, Oil
+- **West Asia:** USD/SAR, USD/AED, USD/ILS, Oil
 - **Europe & Russia:** FTSE, DAX, CAC, MIB, EUR/USD, GBP/USD, USD/RUB
 - **Africa:** JSE, USD/ZAR, USD/EGP, USD/NGN
 - **Americas:** S&P 500, Nasdaq, Dow, Bovespa, Merval, IPC
