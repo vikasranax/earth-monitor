@@ -822,13 +822,6 @@ export default function GroupsPage() {
             ))}
           </AnimatePresence>
         </div>
-
-        {/* Footer */}
-        <div className="mt-12 pt-6 border-t text-center" style={{ borderColor: TOKENS.border }}>
-          <p className="text-[10px] uppercase tracking-widest" style={{ color: TOKENS.textMuted }}>
-            जगत्-मन्थन · Earth Monitor · 地球监测 · مراقبة الأرض · 지구 모니터링
-          </p>
-        </div>
       </div>
     </div>
   );

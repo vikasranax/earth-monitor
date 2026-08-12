@@ -22,7 +22,19 @@ export default async function MarketsPage({ searchParams }: PageProps) {
   if (!armed || quotes.length < 5) {
     const twelve = await fetchTwelveDataQuotes();
     if (twelve.armed && twelve.quotes.length > 0) {
-      quotes = twelve.quotes as unknown as MarketQuote[];
+      // TwelveData's shape doesn't include region/currency — backfill
+      // sensible defaults instead of blind-casting, so region grouping
+      // and currency conversion downstream don't silently break.
+      quotes = twelve.quotes.map((q): MarketQuote => ({
+        symbol: q.symbol,
+        label: q.label,
+        price: q.price,
+        percentChange: q.percentChange,
+        region: "US",
+        regionName: "United States",
+        currency: "USD",
+        category: "equity",
+      }));
       armed = true;
       provider = "TwelveData";
       error = undefined;

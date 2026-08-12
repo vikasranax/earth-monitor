@@ -124,6 +124,17 @@ export default async function HomeCommandDeck() {
             />
           </Panel>
         </main>
+
+        {/* ── Brand Footer ─────────────────────────────── */}
+        <footer className="border-t border-[var(--border)] py-6 text-center">
+          <p className="font-mono text-[11px] tracking-[0.12em] text-[var(--fg-2)] leading-relaxed">
+            जगत्-मन्थन · EARTH MONITOR · 地球监测 · مراقبة الأرض · 지구 모니터링
+          </p>
+          <p className="font-mono text-[10px] tracking-[0.08em] text-[var(--fg-muted)] mt-1">
+            built by <span className="text-[var(--accent)]">VRX</span>
+          </p>
+        </footer>
+
         <CommandPalette />
       </div>
     </ThemeProvider>
