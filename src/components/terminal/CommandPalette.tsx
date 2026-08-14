@@ -57,6 +57,18 @@ export function CommandPalette() {
           window.dispatchEvent(new CustomEvent("open-copilot"));
         },
       },
+      {
+        id: "power",
+        label: "Go to Power Structure",
+        hint: "",
+        action: () => router.push("/power-structure"),
+      },
+      {
+        id: "watchlist",
+        label: "Go to Watchlist",
+        hint: "",
+        action: () => router.push("/watchlist"),
+      },
     ],
     [router],
   );

@@ -4,6 +4,7 @@ import { fontVariables } from "@/lib/fonts";
 import { serverEnv } from "@/lib/env";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CopilotButton } from "@/components/copilot/CopilotButton";
+import { AlertBanner } from "@/components/alerts/AlertBanner";
 import "./global.css";
 import "leaflet/dist/leaflet.css"; // ← add this here
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <body className={`${fontVariables} min-h-screen font-body antialiased`}>
+        <AlertBanner />
         <ErrorBoundary>{children}</ErrorBoundary>
         <CopilotButton />
       </body>

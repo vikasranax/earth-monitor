@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { readiness } from "@/lib/env";
+import { fetchPowerStructure } from "@/lib/providers/power-structure";
 import { isRedisArmed } from "@/lib/redis";
 import { modules, type ModuleInfo } from "@/lib/modules";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -19,6 +20,7 @@ export default async function HomeCommandDeck() {
   const redisArmed = isRedisArmed();
   const readinessPct = Math.round((r.armedCount / r.totalCount) * 100);
   const modulesOnline = modules.filter((m) => m.status === "online").length;
+  const power = await fetchPowerStructure();
   const tickerItems = r.groups.map((g) => ({
     label: g.label,
     value: `${g.items.filter((i) => i.armed).length}/${g.items.length}`,
@@ -39,6 +41,8 @@ export default async function HomeCommandDeck() {
       icon: "◉",
       desc: "· Cables & outages",
     },
+    { href: "/power-structure", label: "Power Structure", icon: "♛", desc: "· Wikidata live" },
+    { href: "/watchlist", label: "Watchlist", icon: "★", desc: "· Alerts & saves" },
   ];
 
   return (
@@ -100,6 +104,20 @@ export default async function HomeCommandDeck() {
               </div>
             </Panel>
           </div>
+
+          <Panel title="Power Structure Highlight" eyebrow="WIKIDATA · LIVE">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {power.leaders.slice(0, 6).map((l, i) => (
+                <div key={`${l.countryCode}-${l.role}-${i}`} className="font-mono text-xs">
+                  <div className="text-[var(--fg-2)] uppercase tracking-widest text-[10px]">
+                    {l.countryCode} ·{" "}
+                    {l.role === "head_of_state" ? "Head of State" : "Head of Gov't"}
+                  </div>
+                  <div className="text-[var(--fg-0)]">{l.personName}</div>
+                </div>
+              ))}
+            </div>
+          </Panel>
 
           <Panel title="Module Manifest" eyebrow="CAMPAIGN M01–M17">
             <DataTable<ModuleInfo>

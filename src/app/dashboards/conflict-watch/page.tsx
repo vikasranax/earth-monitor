@@ -8,7 +8,7 @@ import { StatusBar, CommandPalette, Panel, KpiCard, LedBadge } from "@/component
 const TENSION_REGION_IDS = [
   "taiwan-strait",
   "eastern-europe",
-  "middle-east",
+  "west-asia",
   "south-china-sea",
   "korean-peninsula",
   "kashmir",

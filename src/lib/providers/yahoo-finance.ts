@@ -38,6 +38,22 @@ interface YahooChartResponse {
 
 const PROVIDER_ID = "yahoo-finance";
 
+/* ── Convert "USD/INR" style pairs to Yahoo's actual ticker format ──
+ * Yahoo does NOT accept slash notation. Its real convention is:
+ *   USD/XXX  →  XXX=X     (e.g. USD/INR → INR=X, USD/JPY → JPY=X)
+ *   XXX/USD  →  XXXUSD=X  (e.g. EUR/USD → EURUSD=X, GBP/USD → GBPUSD=X)
+ * This was the root cause of both the blank forex tiles and the
+ * currency-conversion feature never actually converting anything —
+ * every forex fetch was silently 404ing on an invalid symbol.
+ */
+function toYahooSymbol(symbol: string): string {
+  if (!symbol.includes("/")) return symbol; // equities, ETFs, crypto (e.g. BTC-USD) already correct
+  const [base, quote] = symbol.split("/");
+  if (base === "USD") return `${quote}=X`;
+  if (quote === "USD") return `${base}USD=X`;
+  return `${base}${quote}=X`; // fallback for any non-USD cross pair
+}
+
 /* ── Fetch a single quote from Yahoo ──────────────────────── */
 async function fetchYahooQuote(symbol: string): Promise<{
   price: number;
@@ -46,7 +62,8 @@ async function fetchYahooQuote(symbol: string): Promise<{
   shortName: string;
 } | null> {
   try {
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+    const yahooSymbol = toYahooSymbol(symbol);
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1d`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -55,7 +72,7 @@ async function fetchYahooQuote(symbol: string): Promise<{
     });
 
     if (!res.ok) {
-      console.warn(`[YAHOO] ${symbol} HTTP ${res.status}`);
+      console.warn(`[YAHOO] ${symbol} (as ${yahooSymbol}) HTTP ${res.status}`);
       return null;
     }
 
@@ -63,7 +80,7 @@ async function fetchYahooQuote(symbol: string): Promise<{
     const meta = json?.chart?.result?.[0]?.meta;
 
     if (!meta || meta.regularMarketPrice == null) {
-      console.warn(`[YAHOO] ${symbol} no market data`);
+      console.warn(`[YAHOO] ${symbol} (as ${yahooSymbol}) no market data`);
       return null;
     }
 
@@ -103,11 +120,9 @@ export async function fetchForexRates(): Promise<Record<string, number>> {
       if (!quote) return;
 
       if (pair.startsWith("USD/")) {
-        // USD/XYZ = how many XYZ per 1 USD
         const target = pair.replace("USD/", "");
         rates[target] = quote.price;
       } else if (pair.endsWith("/USD")) {
-        // XYZ/USD = how many USD per 1 XYZ, so 1 USD = 1/quote.price XYZ
         const source = pair.replace("/USD", "");
         rates[source] = 1 / quote.price;
       }
@@ -126,22 +141,17 @@ export function convertPrice(
 ): number {
   if (fromCurrency === toCurrency) return price;
 
-  // Step 1: from → USD
   let usdAmount: number;
   if (fromCurrency === "USD") {
     usdAmount = price;
   } else if (rates[fromCurrency]) {
-    // rates[fromCurrency] = how many fromCurrency per 1 USD
-    // So price in fromCurrency → USD = price / rate
     usdAmount = price / rates[fromCurrency];
   } else {
-    return price; // can't convert
+    return price;
   }
 
-  // Step 2: USD → to
   if (toCurrency === "USD") return usdAmount;
   if (rates[toCurrency]) {
-    // rates[toCurrency] = how many toCurrency per 1 USD
     return usdAmount * rates[toCurrency];
   }
 

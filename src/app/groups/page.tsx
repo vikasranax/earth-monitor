@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Globe,
   TrendingUp,
   TrendingDown,
   Calendar,
@@ -19,20 +18,8 @@ import {
   ArrowRight,
   Activity,
 } from "lucide-react";
-
-// ─── Design Tokens ───
-const TOKENS = {
-  bg0: "#05070a",
-  bg1: "#0a0e14",
-  bg2: "#111827",
-  accent: "#ff7a1a",
-  ok: "#2ecc71",
-  danger: "#ff4d4f",
-  info: "#3ba7ff",
-  text: "#e2e8f0",
-  textMuted: "#64748b",
-  border: "#1e293b",
-};
+import { ThemeProvider } from "@/components/theme-provider";
+import { StatusBar, CommandPalette, Panel } from "@/components/terminal";
 
 // ─── Country Flag Emoji Map ───
 const FLAGS: Record<string, string> = {
@@ -82,6 +69,17 @@ const FLAGS: Record<string, string> = {
   Nigeria: "🇳🇬",
   Libya: "🇱🇾",
   Venezuela: "🇻🇪",
+  Poland: "🇵🇱",
+  Netherlands: "🇳🇱",
+  Norway: "🇳🇴",
+  Spain: "🇪🇸",
+  Greece: "🇬🇷",
+  Paraguay: "🇵🇾",
+  Uruguay: "🇺🇾",
+  Belgium: "🇧🇪",
+  Sweden: "🇸🇪",
+  Austria: "🇦🇹",
+  Ireland: "🇮🇪",
 };
 
 // ─── Group Definitions ───
@@ -92,6 +90,8 @@ interface GroupDef {
   color: string;
   accentColor: string;
   members: string[];
+  /** For blocs too large to list fully — shows "+N more" rather than an inaccurate short list presented as complete. */
+  totalMemberCount?: number;
   etfProxy: string[];
   etfWeights: number[];
   nextSummit: { date: string; location: string; label: string };
@@ -263,6 +263,87 @@ const GROUPS: GroupDef[] = [
       "Oil producer alliance controlling ~40% of global crude production and 80% of proven reserves.",
     type: "energy",
   },
+  {
+    id: "g7",
+    name: "Group of Seven",
+    short: "G7",
+    color: "#f43f5e",
+    accentColor: "rgba(244, 63, 94, 0.15)",
+    members: ["USA", "France", "Germany", "Italy", "Japan", "UK", "Canada"],
+    etfProxy: ["SPY", "EWJ", "EWG"],
+    etfWeights: [0.5, 0.25, 0.25],
+    nextSummit: { date: "2026-06-15", location: "TBC", label: "G7 Leaders' Summit" },
+    description:
+      "Informal bloc of major advanced economies coordinating on monetary policy & sanctions.",
+    type: "economic",
+  },
+  {
+    id: "nato",
+    name: "North Atlantic Treaty Organisation",
+    short: "NATO",
+    color: "#64748b",
+    accentColor: "rgba(100, 116, 139, 0.15)",
+    members: [
+      "USA",
+      "UK",
+      "France",
+      "Germany",
+      "Italy",
+      "Canada",
+      "Turkey",
+      "Poland",
+      "Netherlands",
+      "Norway",
+      "Spain",
+      "Greece",
+    ],
+    totalMemberCount: 32,
+    etfProxy: ["SPY", "VGK", "EWU"],
+    etfWeights: [0.5, 0.3, 0.2],
+    nextSummit: { date: "2026-07-09", location: "TBC", label: "NATO Summit" },
+    description:
+      "Transatlantic collective-defence alliance — an armed attack on one member is treated as an attack on all.",
+    type: "security",
+  },
+  {
+    id: "mercosur",
+    name: "Mercosur",
+    short: "MERCOSUR",
+    color: "#84cc16",
+    accentColor: "rgba(132, 204, 22, 0.15)",
+    members: ["Argentina", "Brazil", "Paraguay", "Uruguay"],
+    etfProxy: ["ARGT", "EWZ"],
+    etfWeights: [0.4, 0.6],
+    nextSummit: { date: "2026-12-08", location: "TBC", label: "Mercosur Summit" },
+    description: "South American customs union & free-trade bloc among its founding member states.",
+    type: "economic",
+  },
+  {
+    id: "eu",
+    name: "European Union",
+    short: "EU",
+    color: "#0ea5e9",
+    accentColor: "rgba(14, 165, 233, 0.15)",
+    members: [
+      "Germany",
+      "France",
+      "Italy",
+      "Netherlands",
+      "Poland",
+      "Belgium",
+      "Spain",
+      "Sweden",
+      "Austria",
+      "Ireland",
+    ],
+    totalMemberCount: 27,
+    etfProxy: ["VGK", "EZU"],
+    etfWeights: [0.5, 0.5],
+    nextSummit: { date: "2026-06-25", location: "Brussels, Belgium", label: "European Council" },
+    description:
+      "Political & economic union of European states with a single market and shared institutions.",
+    type: "economic",
+  },
 ];
 
 // ─── Mock Market Data Generator ───
@@ -336,6 +417,26 @@ const MOCK_NEWS: Record<string, string[]> = {
     "OPEC+ JMMC maintains production quotas amid volatile Brent crude pricing",
     "Saudi Aramco and Russia's Rosneft coordinate on Asian market supply strategy",
     "OPEC+ considers extending output cuts into Q4 2026 on demand uncertainty",
+  ],
+  g7: [
+    "G7 finance ministers coordinate response to sovereign debt distress in emerging markets",
+    "G7 sanctions coordination working group reviews enforcement gaps",
+    "Host nation announces agenda focus: AI governance and critical minerals",
+  ],
+  nato: [
+    "NATO defence ministers review burden-sharing targets ahead of summit",
+    "Alliance announces expanded Baltic air-policing rotation",
+    "NATO-Indo-Pacific partners deepen cooperation on maritime security",
+  ],
+  mercosur: [
+    "Mercosur-EU trade agreement ratification process advances in member parliaments",
+    "Bloc discusses common external tariff adjustments amid regional trade talks",
+    "Mercosur infrastructure fund approves cross-border transport corridor",
+  ],
+  eu: [
+    "European Council reviews enlargement roadmap for candidate countries",
+    "EU finance ministers discuss joint defence financing mechanism",
+    "Brussels advances digital markets regulatory framework",
   ],
 };
 
@@ -419,6 +520,7 @@ function GroupCard({
 }) {
   const daysLeft = useCountdown(group.nextSummit.date);
   const isPositive = (market?.change ?? 0) >= 0;
+  const extraMembers = group.totalMemberCount ? group.totalMemberCount - group.members.length : 0;
 
   const typeIcon = {
     economic: <BarChart3 size={14} />,
@@ -432,37 +534,33 @@ function GroupCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="rounded-xl border overflow-hidden"
-      style={{
-        background: TOKENS.bg1,
-        borderColor: TOKENS.border,
-        boxShadow: `0 0 0 1px ${group.accentColor}`,
-      }}
+      className="corner-ticks rounded-[var(--radius-md)] border overflow-hidden bg-[var(--bg-1)]"
+      style={{ borderColor: "var(--border)", boxShadow: `0 0 0 1px ${group.accentColor}` }}
     >
-      {/* Header */}
-      <div className="p-5 cursor-pointer flex items-center justify-between" onClick={onToggle}>
+      <div className="p-4 cursor-pointer flex items-center justify-between" onClick={onToggle}>
         <div className="flex items-center gap-4">
           <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center text-lg font-bold"
+            className="w-11 h-11 rounded-[var(--radius-sm)] flex items-center justify-center text-xs font-mono font-bold"
             style={{ background: group.accentColor, color: group.color }}
           >
             {group.short}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold" style={{ color: TOKENS.text }}>
+              <h3 className="font-display text-base font-semibold text-[var(--fg-0)]">
                 {group.name}
               </h3>
               <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center gap-1"
+                className="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium flex items-center gap-1"
                 style={{ background: group.accentColor, color: group.color }}
               >
                 {typeIcon}
                 {group.type.toUpperCase()}
               </span>
             </div>
-            <p className="text-xs mt-0.5" style={{ color: TOKENS.textMuted }}>
-              {group.members.length} members · Next summit in {daysLeft} days
+            <p className="font-mono text-[11px] text-[var(--fg-2)] mt-0.5">
+              {group.totalMemberCount ?? group.members.length} members · Next summit in {daysLeft}{" "}
+              days
             </p>
           </div>
         </div>
@@ -470,12 +568,12 @@ function GroupCard({
         <div className="flex items-center gap-4">
           {market && (
             <div className="text-right hidden sm:block">
-              <div className="text-sm font-mono font-semibold" style={{ color: TOKENS.text }}>
+              <div className="font-mono text-sm font-semibold text-[var(--fg-0)]">
                 {market.price.toFixed(2)}
               </div>
               <div
-                className="text-xs font-mono flex items-center justify-end gap-1"
-                style={{ color: isPositive ? TOKENS.ok : TOKENS.danger }}
+                className="font-mono text-xs flex items-center justify-end gap-1"
+                style={{ color: isPositive ? "var(--ok)" : "var(--danger)" }}
               >
                 {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                 {isPositive ? "+" : ""}
@@ -483,32 +581,27 @@ function GroupCard({
               </div>
             </div>
           )}
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-            style={{ background: TOKENS.bg2 }}
-          >
+          <div className="w-7 h-7 rounded-full flex items-center justify-center bg-[var(--bg-2)]">
             {expanded ? (
-              <ChevronUp size={16} style={{ color: TOKENS.textMuted }} />
+              <ChevronUp size={16} className="text-[var(--fg-2)]" />
             ) : (
-              <ChevronDown size={16} style={{ color: TOKENS.textMuted }} />
+              <ChevronDown size={16} className="text-[var(--fg-2)]" />
             )}
           </div>
         </div>
       </div>
 
-      {/* Mini Sparkline (always visible) */}
       {market && (
-        <div className="px-5 pb-3">
+        <div className="px-4 pb-3">
           <Sparkline
             data={market.sparkline}
-            color={isPositive ? TOKENS.ok : TOKENS.danger}
+            color={isPositive ? "#2ecc71" : "#ff4d4f"}
             width={280}
             height={40}
           />
         </div>
       )}
 
-      {/* Expanded Content */}
       <AnimatePresence>
         {expanded && (
           <motion.div
@@ -518,22 +611,15 @@ function GroupCard({
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="p-5 pt-0 space-y-5">
-              <div className="h-px" style={{ background: TOKENS.border }} />
+            <div className="p-4 pt-0 space-y-5">
+              <div className="h-px bg-[var(--border)]" />
 
-              {/* Description */}
-              <p className="text-sm leading-relaxed" style={{ color: TOKENS.textMuted }}>
-                {group.description}
-              </p>
+              <p className="text-sm leading-relaxed text-[var(--fg-2)]">{group.description}</p>
 
-              {/* Members Grid */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Users size={14} style={{ color: group.color }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: TOKENS.textMuted }}
-                  >
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)]">
                     Members
                   </span>
                 </div>
@@ -541,28 +627,24 @@ function GroupCard({
                   {group.members.map((m) => (
                     <div
                       key={m}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border"
-                      style={{
-                        background: TOKENS.bg2,
-                        borderColor: TOKENS.border,
-                        color: TOKENS.text,
-                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium border border-[var(--border)] bg-[var(--bg-2)] text-[var(--fg-0)]"
                     >
                       <span className="text-base">{FLAGS[m] || "🏳️"}</span>
                       <span>{m}</span>
                     </div>
                   ))}
+                  {extraMembers > 0 && (
+                    <div className="flex items-center px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs font-mono border border-dashed border-[var(--border-strong)] text-[var(--fg-muted)]">
+                      +{extraMembers} more
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Market Proxy */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Activity size={14} style={{ color: group.color }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: TOKENS.textMuted }}
-                  >
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)]">
                     Market Proxy (ETF Blend)
                   </span>
                 </div>
@@ -570,57 +652,42 @@ function GroupCard({
                   {group.etfProxy.map((etf, i) => (
                     <div
                       key={etf}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono border"
-                      style={{
-                        background: TOKENS.bg2,
-                        borderColor: TOKENS.border,
-                        color: TOKENS.text,
-                      }}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-mono border border-[var(--border)] bg-[var(--bg-2)]"
                     >
                       <span style={{ color: group.color }}>{etf}</span>
-                      <span style={{ color: TOKENS.textMuted }}>
+                      <span className="text-[var(--fg-2)]">
                         {((group.etfWeights[i] ?? 0) * 100).toFixed(0)}%
                       </span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[10px] mt-2" style={{ color: TOKENS.textMuted }}>
-                  Synthetic index weighted from member-country ETFs. Connect to TwelveData API for
-                  live prices.
+                <p className="text-[10px] mt-2 text-[var(--fg-muted)] font-mono">
+                  Synthetic index weighted from member-country ETFs. Connect to your markets
+                  provider for live prices.
                 </p>
               </div>
 
-              {/* News Feed */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Newspaper size={14} style={{ color: group.color }} />
-                  <span
-                    className="text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: TOKENS.textMuted }}
-                  >
-                    Recent News
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)]">
+                    Recent News (Illustrative)
                   </span>
                 </div>
                 <div className="space-y-2">
                   {(MOCK_NEWS[group.id] || []).map((news, i) => (
                     <div
                       key={i}
-                      className="flex items-start gap-3 p-3 rounded-lg border group cursor-pointer hover:border-opacity-50 transition-colors"
-                      style={{
-                        background: TOKENS.bg0,
-                        borderColor: TOKENS.border,
-                      }}
+                      className="flex items-start gap-3 p-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-0)] group cursor-pointer hover:border-[var(--border-strong)] transition-colors"
                     >
                       <div
                         className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
                         style={{ background: group.color }}
                       />
                       <div className="flex-1">
-                        <p className="text-xs leading-relaxed" style={{ color: TOKENS.text }}>
-                          {news}
-                        </p>
+                        <p className="text-xs leading-relaxed text-[var(--fg-0)]">{news}</p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <span className="text-[10px]" style={{ color: TOKENS.textMuted }}>
+                          <span className="text-[10px] text-[var(--fg-muted)] font-mono">
                             {["2h ago", "5h ago", "1d ago"][i]}
                           </span>
                           <ArrowRight
@@ -635,26 +702,22 @@ function GroupCard({
                 </div>
               </div>
 
-              {/* Summit Card */}
               <div
-                className="p-4 rounded-xl border flex items-center justify-between"
-                style={{
-                  background: group.accentColor,
-                  borderColor: `${group.color}30`,
-                }}
+                className="p-4 rounded-[var(--radius-md)] border flex items-center justify-between"
+                style={{ background: group.accentColor, borderColor: `${group.color}30` }}
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
+                    className="w-9 h-9 rounded-[var(--radius-sm)] flex items-center justify-center"
                     style={{ background: `${group.color}20` }}
                   >
-                    <Calendar size={18} style={{ color: group.color }} />
+                    <Calendar size={16} style={{ color: group.color }} />
                   </div>
                   <div>
-                    <div className="text-xs font-medium" style={{ color: group.color }}>
+                    <div className="text-xs font-mono font-medium" style={{ color: group.color }}>
                       {group.nextSummit.label}
                     </div>
-                    <div className="text-sm font-semibold mt-0.5" style={{ color: TOKENS.text }}>
+                    <div className="text-sm font-semibold mt-0.5 text-[var(--fg-0)]">
                       {new Date(group.nextSummit.date).toLocaleDateString("en-US", {
                         month: "short",
                         day: "numeric",
@@ -662,8 +725,8 @@ function GroupCard({
                       })}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <MapPin size={10} style={{ color: TOKENS.textMuted }} />
-                      <span className="text-[10px]" style={{ color: TOKENS.textMuted }}>
+                      <MapPin size={10} className="text-[var(--fg-muted)]" />
+                      <span className="text-[10px] text-[var(--fg-muted)] font-mono">
                         {group.nextSummit.location}
                       </span>
                     </div>
@@ -673,10 +736,7 @@ function GroupCard({
                   <div className="text-2xl font-bold font-mono" style={{ color: group.color }}>
                     {daysLeft}
                   </div>
-                  <div
-                    className="text-[10px] uppercase tracking-wider"
-                    style={{ color: TOKENS.textMuted }}
-                  >
+                  <div className="text-[10px] uppercase tracking-wider text-[var(--fg-muted)] font-mono">
                     Days Left
                   </div>
                 </div>
@@ -709,120 +769,70 @@ export default function GroupsPage() {
   }, [markets]);
 
   return (
-    <div className="min-h-screen" style={{ background: TOKENS.bg0 }}>
-      {/* Top Bar */}
-      <div
-        className="border-b sticky top-0 z-50 backdrop-blur-xl"
-        style={{ background: `${TOKENS.bg0}ee`, borderColor: TOKENS.border }}
-      >
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
-              style={{ background: `${TOKENS.accent}15` }}
-            >
-              <Globe size={20} style={{ color: TOKENS.accent }} />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold" style={{ color: TOKENS.text }}>
-                Geopolitical Groupings
-              </h1>
-              <p
-                className="text-[10px] uppercase tracking-widest"
-                style={{ color: TOKENS.textMuted }}
-              >
-                Bloc Intelligence Dashboard
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div
-              className="hidden md:flex items-center gap-4 text-xs"
-              style={{ color: TOKENS.textMuted }}
-            >
+    <ThemeProvider>
+      <div className="min-h-screen flex flex-col bg-[var(--bg-0)]">
+        <StatusBar />
+        <main className="flex-1 p-4 max-w-6xl mx-auto w-full flex flex-col gap-4">
+          <Panel
+            title="Geopolitical Groupings"
+            eyebrow="BLOC INTELLIGENCE"
+            actions={
+              <div className="flex items-center gap-1 p-1 rounded-[var(--radius-sm)] bg-[var(--bg-2)] border border-[var(--border)]">
+                {(["all", "economic", "security", "energy"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setFilter(f)}
+                    className="px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-mono font-medium transition-all capitalize"
+                    style={{
+                      background: filter === f ? "rgba(255, 122, 26, 0.15)" : "transparent",
+                      color: filter === f ? "var(--accent)" : "var(--fg-2)",
+                    }}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            }
+          >
+            <div className="flex items-center gap-4 text-xs font-mono text-[var(--fg-2)] mb-3">
               <div className="flex items-center gap-1.5">
                 <Users size={12} />
-                <span>{stats.totalMembers} unique members</span>
+                <span>{stats.totalMembers} unique members tracked</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Activity size={12} />
-                <span style={{ color: stats.avgChange >= 0 ? TOKENS.ok : TOKENS.danger }}>
+                <span style={{ color: stats.avgChange >= 0 ? "var(--ok)" : "var(--danger)" }}>
                   Avg {stats.avgChange >= 0 ? "+" : ""}
                   {stats.avgChange.toFixed(2)}%
                 </span>
               </div>
             </div>
-            <div
-              className="flex items-center gap-1 p-1 rounded-lg"
-              style={{ background: TOKENS.bg1, border: `1px solid ${TOKENS.border}` }}
-            >
-              {(["all", "economic", "security", "energy"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize"
-                  style={{
-                    background: filter === f ? `${TOKENS.accent}20` : "transparent",
-                    color: filter === f ? TOKENS.accent : TOKENS.textMuted,
-                  }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Intro */}
-        <div
-          className="mb-8 p-5 rounded-xl border"
-          style={{ background: TOKENS.bg1, borderColor: TOKENS.border }}
-        >
-          <div className="flex items-start gap-4">
-            <div
-              className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: `${TOKENS.info}15` }}
-            >
-              <Filter size={18} style={{ color: TOKENS.info }} />
-            </div>
-            <div>
-              <h2 className="text-sm font-semibold mb-1" style={{ color: TOKENS.text }}>
-                Bloc-Level Market Proxies
-              </h2>
-              <p className="text-xs leading-relaxed" style={{ color: TOKENS.textMuted }}>
+            <div className="flex items-start gap-3">
+              <Filter size={16} className="text-[var(--info)] shrink-0 mt-0.5" />
+              <p className="text-xs leading-relaxed text-[var(--fg-2)]">
                 Each grouping shows a synthetic index built from member-country ETFs weighted by
-                approximate GDP share. Connect to your existing TwelveData provider in{" "}
-                <code
-                  className="px-1 py-0.5 rounded text-[10px]"
-                  style={{ background: TOKENS.bg2, color: TOKENS.accent }}
-                >
-                  lib/providers/twelvedata.ts
-                </code>{" "}
-                to stream live quotes. Summit dates are verified from official sources.
+                approximate GDP share, plus illustrative news and summit countdowns. Connect a live
+                markets provider for real quotes.
               </p>
             </div>
-          </div>
-        </div>
+          </Panel>
 
-        {/* Group Cards */}
-        <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((group) => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                market={markets[group.id]}
-                expanded={expandedId === group.id}
-                onToggle={() => setExpandedId(expandedId === group.id ? null : group.id)}
-              />
-            ))}
-          </AnimatePresence>
-        </div>
+          <div className="flex flex-col gap-4">
+            <AnimatePresence mode="popLayout">
+              {filtered.map((group) => (
+                <GroupCard
+                  key={group.id}
+                  group={group}
+                  market={markets[group.id]}
+                  expanded={expandedId === group.id}
+                  onToggle={() => setExpandedId(expandedId === group.id ? null : group.id)}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        </main>
+        <CommandPalette />
       </div>
-    </div>
+    </ThemeProvider>
   );
 }

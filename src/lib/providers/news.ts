@@ -56,10 +56,10 @@ const RSS_FEEDS = [
   // South-East Asia
   { name: "Straits Times", url: "https://www.straitstimes.com/news/asia/rss.xml", region: "SG" },
 
-  // Middle East
+  // West Asia
   { name: "Al Jazeera", url: "https://www.aljazeera.com/xml/rss/all.xml", region: "QA" },
   { name: "Jerusalem Post", url: "https://www.jpost.com/rss/rssfeedsinternational", region: "IL" },
-  { name: "Middle East Eye", url: "https://www.middleeasteye.net/rss", region: "ME" },
+  { name: "Middle East Eye", url: "https://www.middleeasteye.net/rss", region: "WA" },
 
   // Europe
   { name: "The Guardian", url: "https://www.theguardian.com/world/rss", region: "GB" },
