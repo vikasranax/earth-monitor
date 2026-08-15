@@ -15,6 +15,11 @@ import {
   Ticker,
 } from "@/components/terminal";
 
+// Curated for variety: two nuclear powers in active tension (RU/UA), the
+// three largest economies/populations (US/CN/IN), and a constitutional
+// monarchy for government-type contrast (GB). Easy to swap — just edit this array.
+const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "GB", "UA"];
+
 export default async function HomeCommandDeck() {
   const r = readiness();
   const redisArmed = isRedisArmed();
@@ -46,7 +51,7 @@ export default async function HomeCommandDeck() {
     {
       href: "/signal-freedom",
       label: "Signal & Freedom Indices",
-      icon: "📊",
+      icon: "▤",
       desc: "· Press freedom data",
     },
     { href: "/watchlist", label: "Watchlist", icon: "★", desc: "· Alerts & saves" },
@@ -114,15 +119,20 @@ export default async function HomeCommandDeck() {
 
           <Panel title="Power Structure Highlight" eyebrow="WIKIDATA · LIVE">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {power.leaders.slice(0, 6).map((l, i) => (
-                <div key={`${l.countryCode}-${l.role}-${i}`} className="font-mono text-xs">
-                  <div className="text-[var(--fg-2)] uppercase tracking-widest text-[10px]">
-                    {l.countryCode} ·{" "}
-                    {l.role === "head_of_state" ? "Head of State" : "Head of Gov't"}
+              {HIGHLIGHT_COUNTRY_CODES.map((code) => {
+                const countryLeaders = power.leaders.filter((l) => l.countryCode === code);
+                const top =
+                  countryLeaders.find((l) => l.role === "head_of_state") ?? countryLeaders[0];
+                if (!top) return null;
+                return (
+                  <div key={code} className="font-mono text-xs">
+                    <div className="text-[var(--fg-2)] uppercase tracking-widest text-[10px]">
+                      {code} · {top.countryName}
+                    </div>
+                    <div className="text-[var(--fg-0)]">{top.personName}</div>
                   </div>
-                  <div className="text-[var(--fg-0)]">{l.personName}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Panel>
 

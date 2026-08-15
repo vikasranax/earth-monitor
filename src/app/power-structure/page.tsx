@@ -1,5 +1,4 @@
 import { fetchPowerStructure } from "@/lib/providers/power-structure";
-import { countryRegistry } from "@/lib/power-structure/country-registry";
 import { ThemeProvider } from "@/components/theme-provider";
 import { StatusBar, CommandPalette, Panel, LedBadge } from "@/components/terminal";
 
@@ -12,6 +11,7 @@ export default async function PowerStructurePage() {
     existing.push(leader);
     byCountry.set(leader.countryCode, existing);
   }
+  const countryCodes = Array.from(byCountry.keys()).sort();
 
   return (
     <ThemeProvider>
@@ -33,19 +33,20 @@ export default async function PowerStructurePage() {
               <p className="text-sm text-[var(--danger)] font-mono">{result.error}</p>
             )}
             <p className="text-sm text-[var(--fg-2)] font-mono">
-              {countryRegistry.length} countries tracked · {result.leaders.length} officeholders
+              {countryCodes.length} countries tracked · {result.leaders.length} officeholders
               found · refreshed every 6 hours from Wikidata.
             </p>
           </Panel>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {countryRegistry.map((c) => {
-              const leaders = byCountry.get(c.code) ?? [];
+            {countryCodes.map((code) => {
+              const leaders = byCountry.get(code) ?? [];
               const state = leaders.find((l) => l.role === "head_of_state");
               const gov = leaders.find((l) => l.role === "head_of_government");
+              const name = leaders[0]?.countryName ?? code;
 
               return (
-                <Panel key={c.code} title={c.name} eyebrow={c.code}>
+                <Panel key={code} title={name} eyebrow={code}>
                   <div className="flex flex-col gap-2 font-mono text-sm">
                     <div className="flex justify-between border-b border-[var(--border)] pb-2">
                       <span className="text-[var(--fg-2)]">Head of State</span>

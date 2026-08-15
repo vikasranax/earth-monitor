@@ -31,6 +31,9 @@ interface YahooChartResponse {
         shortName?: string;
         symbol?: string;
       };
+      indicators?: {
+        quote?: Array<{ close?: Array<number | null> }>;
+      };
     }>;
     error?: { description?: string };
   };
@@ -63,7 +66,11 @@ async function fetchYahooQuote(symbol: string): Promise<{
 } | null> {
   try {
     const yahooSymbol = toYahooSymbol(symbol);
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=1d`;
+    // range=5d instead of 1d — meta.previousClose is unreliable/often missing
+    // from Yahoo's chart API, which was silently making every percentChange
+    // come out to 0.00%. Deriving prevClose from the actual daily close
+    // history is far more reliable than trusting the meta field.
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1d&range=5d`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -77,16 +84,26 @@ async function fetchYahooQuote(symbol: string): Promise<{
     }
 
     const json = (await res.json()) as YahooChartResponse;
-    const meta = json?.chart?.result?.[0]?.meta;
+    const result = json?.chart?.result?.[0];
+    const meta = result?.meta;
 
     if (!meta || meta.regularMarketPrice == null) {
       console.warn(`[YAHOO] ${symbol} (as ${yahooSymbol}) no market data`);
       return null;
     }
 
+    const price = meta.regularMarketPrice;
+    const closes = result?.indicators?.quote?.[0]?.close?.filter((c): c is number => c != null);
+
+    // Second-to-last close = yesterday's close (last is today's, still forming).
+    let prevClose = meta.previousClose ?? price;
+    if (closes && closes.length >= 2) {
+      prevClose = closes[closes.length - 2] ?? prevClose;
+    }
+
     return {
-      price: meta.regularMarketPrice,
-      prevClose: meta.previousClose ?? meta.regularMarketPrice,
+      price,
+      prevClose,
       currency: meta.currency || "USD",
       shortName: meta.shortName || symbol,
     };

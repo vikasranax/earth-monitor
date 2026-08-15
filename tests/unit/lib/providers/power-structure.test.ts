@@ -6,6 +6,8 @@ describe("parseBindings", () => {
     const result = parseBindings([
       {
         country: { value: "http://www.wikidata.org/entity/Q30" },
+        countryLabel: { value: "United States of America" },
+        iso: { value: "US" },
         role: { value: "head_of_state" },
         person: { value: "http://www.wikidata.org/entity/Q123" },
         personLabel: { value: "Test Person" },
@@ -17,14 +19,17 @@ describe("parseBindings", () => {
     const entry = result[0];
     if (!entry) throw new Error("expected an entry");
     expect(entry.countryCode).toBe("US");
+    expect(entry.countryName).toBe("United States of America");
     expect(entry.personName).toBe("Test Person");
     expect(entry.since).toBe("2021-01-20");
   });
 
-  it("skips bindings for QIDs not in the registry", () => {
+  it("skips bindings with a missing or malformed ISO code", () => {
     const result = parseBindings([
       {
         country: { value: "http://www.wikidata.org/entity/Q99999999" },
+        countryLabel: { value: "Unknown Place" },
+        iso: { value: "" },
         role: { value: "head_of_state" },
         person: { value: "http://www.wikidata.org/entity/Q1" },
         personLabel: { value: "Unknown" },
@@ -37,6 +42,8 @@ describe("parseBindings", () => {
     const result = parseBindings([
       {
         country: { value: "http://www.wikidata.org/entity/Q30" },
+        countryLabel: { value: "United States of America" },
+        iso: { value: "US" },
         role: { value: "head_of_state" },
         person: { value: "http://www.wikidata.org/entity/Q22686" },
         personLabel: { value: "Q22686" },

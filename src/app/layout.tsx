@@ -11,12 +11,25 @@ import "leaflet/dist/leaflet.css"; // ← add this here
 export const metadata: Metadata = {
   metadataBase: new URL(serverEnv.SITE_URL),
   title: {
-    default: "JAGAT-MANTHAN — Global Intelligence Terminal",
-    template: "%s · JAGAT-MANTHAN",
+    default: "Earth Monitor (जगत्-मन्थन) — Global Intelligence Terminal",
+    template: "%s · Earth Monitor",
   },
   description:
-    "जगत्-मन्थन — the churning of the world. Geopolitics, markets, shipping, airspace, disasters, cyber and space, ingested live and analysed by AI.",
-  robots: { index: false, follow: false }, // public indexing switches on at M13 launch
+    "जगत्-मन्थन — the churning of the world. Real-time geopolitics, markets, shipping, airspace, disasters, power structure, and space — ingested live, fully open-source.",
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: "Earth Monitor (जगत्-मन्थन)",
+    description:
+      "Real-time global intelligence terminal — geopolitics, markets, shipping, airspace, disasters, power structure, and space.",
+    url: serverEnv.SITE_URL,
+    siteName: "Earth Monitor",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Earth Monitor (जगत्-मन्थन)",
+    description: "Real-time global intelligence terminal, open-source.",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -3,18 +3,35 @@ import { fetchAllNews } from "@/lib/providers/news";
 import { fetchMarketQuotes } from "@/lib/providers/yahoo-finance";
 import { fetchHazardSummary } from "@/lib/providers/hazard-summary";
 import { fetchPowerStructure } from "@/lib/providers/power-structure";
+import { fetchUpcomingLaunches } from "@/lib/providers/space-launches";
+import { fetchAirspaceSnapshot } from "@/lib/providers/opensky";
 import { ThemeProvider } from "@/components/theme-provider";
 import { StatusBar, CommandPalette, Panel, LedBadge, Ticker } from "@/components/terminal";
 import { ShippingStatusWidget } from "@/components/dashboards/ShippingStatusWidget";
 
 export const dynamic = "force-dynamic";
 
+// One entry per country — avoids showing the same person twice when they
+// hold both roles (e.g. Nigeria's president holds both HoS and HoG).
+const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "GB", "UA"];
+
+const TENSION_REGION_IDS = [
+  "taiwan-strait",
+  "eastern-europe",
+  "west-asia",
+  "south-china-sea",
+  "korean-peninsula",
+  "kashmir",
+];
+
 export default async function ThematicDeckPage() {
-  const [news, markets, hazard, power] = await Promise.all([
+  const [news, markets, hazard, power, launches, airspace] = await Promise.all([
     fetchAllNews(),
     fetchMarketQuotes(),
     fetchHazardSummary(),
     fetchPowerStructure(),
+    fetchUpcomingLaunches(),
+    fetchAirspaceSnapshot(),
   ]);
 
   const tickerItems = news.articles.slice(0, 10).map((a) => ({
@@ -23,7 +40,16 @@ export default async function ThematicDeckPage() {
   }));
 
   const heatmapQuotes = markets.quotes.slice(0, 24);
-  const recentLeaders = power.leaders.slice(0, 6);
+
+  const highlightedLeaders = HIGHLIGHT_COUNTRY_CODES.map((code) => {
+    const countryLeaders = power.leaders.filter((l) => l.countryCode === code);
+    return countryLeaders.find((l) => l.role === "head_of_state") ?? countryLeaders[0];
+  }).filter((l): l is NonNullable<typeof l> => Boolean(l));
+
+  const nextLaunch = launches.launches[0];
+  const tensionCounts = airspace.regionCounts.filter((r) =>
+    TENSION_REGION_IDS.includes(r.regionId),
+  );
 
   return (
     <ThemeProvider>
@@ -34,7 +60,8 @@ export default async function ThematicDeckPage() {
         <main className="flex-1 p-4 max-w-7xl mx-auto w-full flex flex-col gap-4">
           <Panel title="Thematic Deck" eyebrow="UNIFIED VIEW">
             <p className="text-sm text-[var(--fg-2)] font-mono">
-              Live news, markets, hazards, shipping, and power structure — one screen.
+              Live news, markets, hazards, shipping, power structure, airspace, and orbital activity
+              — one screen.
             </p>
           </Panel>
 
@@ -119,10 +146,10 @@ export default async function ThematicDeckPage() {
 
             <Panel title="Power Structure" eyebrow="WIKIDATA · LIVE" className="lg:col-span-2">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {recentLeaders.map((l, i) => (
-                  <div key={`${l.countryCode}-${l.role}-${i}`} className="font-mono text-xs">
+                {highlightedLeaders.map((l) => (
+                  <div key={l.countryCode} className="font-mono text-xs">
                     <div className="text-[var(--fg-2)] uppercase tracking-widest text-[10px]">
-                      {l.countryCode} · {l.role === "head_of_state" ? "Head of State" : "Head of Gov't"}
+                      {l.countryCode} · {l.countryName}
                     </div>
                     <div className="text-[var(--fg-0)]">{l.personName}</div>
                   </div>
@@ -133,6 +160,79 @@ export default async function ThematicDeckPage() {
                 className="block mt-3 text-xs text-[var(--accent)] underline font-mono"
               >
                 View all {power.leaders.length} officeholders →
+              </Link>
+            </Panel>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Panel
+              title="Next Launch"
+              eyebrow="LAUNCH LIBRARY 2"
+              actions={
+                <LedBadge
+                  status={launches.error ? "warn" : "ok"}
+                  label={launches.error ? "ERROR" : "LIVE"}
+                  pulse={!launches.error}
+                />
+              }
+            >
+              {launches.error && (
+                <p className="text-sm text-[var(--danger)] font-mono">{launches.error}</p>
+              )}
+              {!launches.error && !nextLaunch && (
+                <p className="text-sm text-[var(--fg-2)] font-mono">No upcoming launches found.</p>
+              )}
+              {nextLaunch && (
+                <div className="font-mono text-xs flex flex-col gap-1">
+                  <div className="text-[var(--fg-0)] text-sm font-semibold">{nextLaunch.name}</div>
+                  <div className="text-[var(--fg-2)]">
+                    {nextLaunch.provider} · {nextLaunch.rocket}
+                  </div>
+                  <div className="text-[var(--fg-1)]">
+                    {new Date(nextLaunch.net).toLocaleString()}
+                  </div>
+                  <div className="text-[var(--fg-muted)]">{nextLaunch.locationName}</div>
+                </div>
+              )}
+              <Link
+                href="/space"
+                className="block mt-3 text-xs text-[var(--accent)] underline font-mono"
+              >
+                View all {launches.launches.length} upcoming →
+              </Link>
+            </Panel>
+
+            <Panel
+              title="Airspace Tension Zones"
+              eyebrow="OPENSKY"
+              className="lg:col-span-2"
+              actions={
+                <LedBadge
+                  status={airspace.error ? "warn" : "ok"}
+                  label={airspace.error ? "ERROR" : "LIVE"}
+                  pulse={!airspace.error}
+                />
+              }
+            >
+              {airspace.error && (
+                <p className="text-sm text-[var(--danger)] font-mono">{airspace.error}</p>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {tensionCounts.map((r) => (
+                  <div
+                    key={r.regionId}
+                    className="flex justify-between border-b border-[var(--border)] py-1.5 font-mono text-xs"
+                  >
+                    <span className="text-[var(--fg-1)]">{r.regionId}</span>
+                    <span className="text-[var(--fg-0)]">{r.count}</span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/dashboards/conflict-watch"
+                className="block mt-3 text-xs text-[var(--accent)] underline font-mono"
+              >
+                Full Conflict Watch dashboard →
               </Link>
             </Panel>
           </div>

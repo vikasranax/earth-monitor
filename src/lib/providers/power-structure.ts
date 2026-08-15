@@ -1,5 +1,4 @@
 import { fetchWithCache } from "@/lib/fetch-with-cache";
-import { countryRegistry } from "@/lib/power-structure/country-registry";
 
 export interface LeaderEntry {
   countryCode: string;
@@ -17,11 +16,12 @@ export interface PowerStructureResult {
 }
 
 const WIKIDATA_ENDPOINT = "https://query.wikidata.org/sparql";
-const QID_TO_CODE = new Map(countryRegistry.map((c) => [c.wikidataId, c]));
 const RAW_QID_PATTERN = /^Q\d+$/;
 
 interface SparqlBinding {
   country: { value: string };
+  countryLabel: { value: string };
+  iso: { value: string };
   role: { value: string };
   person: { value: string };
   personLabel: { value: string };
@@ -32,11 +32,15 @@ interface SparqlResponse {
   results: { bindings: SparqlBinding[] };
 }
 
-function buildQuery(qids: string[]): string {
-  const values = qids.map((q) => `wd:${q}`).join(" ");
+// Queries Wikidata directly for every sovereign state (P31 = instance of
+// "sovereign state", Q3624078) along with its ISO 3166-1 alpha-2 code
+// (P297) and current head of state (P35) / head of government (P6).
+// No hand-maintained country list needed — Wikidata is the source of truth.
+function buildQuery(): string {
   return `
-    SELECT ?country ?role ?person ?personLabel ?start WHERE {
-      VALUES ?country { ${values} }
+    SELECT ?country ?countryLabel ?iso ?role ?person ?personLabel ?start WHERE {
+      ?country wdt:P31 wd:Q3624078 .
+      ?country wdt:P297 ?iso .
       {
         ?country p:P35 ?statement .
         ?statement ps:P35 ?person .
@@ -53,25 +57,18 @@ function buildQuery(qids: string[]): string {
   `;
 }
 
-function qidFromUrl(url: string): string {
-  return url.substring(url.lastIndexOf("/") + 1);
-}
-
 export function parseBindings(bindings: SparqlBinding[]): LeaderEntry[] {
   const entries: LeaderEntry[] = [];
   for (const b of bindings) {
-    const countryQid = qidFromUrl(b.country.value);
-    const registryEntry = QID_TO_CODE.get(countryQid);
-    if (!registryEntry) continue;
+    const code = b.iso?.value?.toUpperCase();
+    if (!code || code.length !== 2) continue; // skip malformed/non-alpha2 entries
 
-    // Occasionally Wikidata's label service misses and returns the raw
-    // QID string instead of a name — don't surface that to users.
     const rawLabel = b.personLabel.value;
     const personName = RAW_QID_PATTERN.test(rawLabel) ? "Name unavailable" : rawLabel;
 
     entries.push({
-      countryCode: registryEntry.code,
-      countryName: registryEntry.name,
+      countryCode: code,
+      countryName: b.countryLabel?.value ?? code,
       role: b.role.value as LeaderEntry["role"],
       personName,
       since: b.start?.value ? b.start.value.slice(0, 10) : null,
@@ -80,8 +77,8 @@ export function parseBindings(bindings: SparqlBinding[]): LeaderEntry[] {
   return entries;
 }
 
-async function queryWikidata(qids: string[]): Promise<LeaderEntry[]> {
-  const query = buildQuery(qids);
+async function queryWikidata(): Promise<LeaderEntry[]> {
+  const query = buildQuery();
   const res = await fetch(WIKIDATA_ENDPOINT, {
     method: "POST",
     headers: {
@@ -101,17 +98,8 @@ export async function fetchPowerStructure(): Promise<PowerStructureResult> {
   try {
     const { data, cached } = await fetchWithCache(
       "power-structure:wikidata:all",
-      async () => {
-        const qids = countryRegistry.map((c) => c.wikidataId);
-        const chunkSize = 40;
-        const chunks: string[][] = [];
-        for (let i = 0; i < qids.length; i += chunkSize) {
-          chunks.push(qids.slice(i, i + chunkSize));
-        }
-        const results = await Promise.all(chunks.map((chunk) => queryWikidata(chunk)));
-        return results.flat();
-      },
-      { ttlSeconds: 21600 },
+      () => queryWikidata(),
+      { ttlSeconds: 21600 }, // 6 hours
     );
 
     return { leaders: data, fetchedAt: new Date().toISOString(), cached };
