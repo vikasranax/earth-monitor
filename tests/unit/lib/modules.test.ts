@@ -25,13 +25,17 @@ describe("modules manifest", () => {
       "M09b",
       "M10",
       "M10a",
+      "M11",
       "M12",
+      "M14",
+      "M15",
+      "M16",
     ]);
   });
 
   it("has expected standby modules", () => {
     const standbyIds = modules.filter((m) => m.status === "standby").map((m) => m.id);
 
-    expect(standbyIds).toEqual(["M11", "M13", "M14", "M15", "M16", "M17"]);
+    expect(standbyIds).toEqual(["M13", "M17"]);
   });
 });
