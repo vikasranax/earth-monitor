@@ -95,6 +95,13 @@ const RSS_FEEDS = [
   { name: "Washington Post", url: "https://feeds.washingtonpost.com/rss/world", region: "US" },
 ];
 
+function stripCdata(s: string): string {
+  return s
+    .replace(/<!\[CDATA\[/g, "")
+    .replace(/\]\]>/g, "")
+    .trim();
+}
+
 /* ── RSS parser ───────────────────────────────────────────── */
 function parseItem(
   itemXml: string,
@@ -112,11 +119,11 @@ function parseItem(
   );
   const dateMatch = itemXml.match(/<(?:pubDate|updated)>([\s\S]*?)<\/(?:pubDate|updated)>/);
 
-  const title = titleMatch?.[1]?.trim() || "Untitled";
+  const title = stripCdata(titleMatch?.[1]?.trim() || "Untitled");
   const url = linkMatch?.[1]?.trim() || linkHrefMatch?.[1]?.trim() || "#";
   const description = descMatch?.[1]?.trim() || "";
   const pubDateRaw = dateMatch?.[1]?.trim() || "";
-  const cleanDesc = description.replace(/<[^>]+>/g, "").slice(0, 200);
+  const cleanDesc = stripCdata(description.replace(/<[^>]+>/g, "")).slice(0, 200);
 
   return {
     id: `${sourceName}-${index}`,

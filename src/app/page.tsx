@@ -18,7 +18,7 @@ import {
 // Curated for variety: two nuclear powers in active tension (RU/UA), the
 // three largest economies/populations (US/CN/IN), and a constitutional
 // monarchy for government-type contrast (GB). Easy to swap — just edit this array.
-const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "GB", "UA"];
+const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "IR", "KP"];
 
 export default async function HomeCommandDeck() {
   const r = readiness();

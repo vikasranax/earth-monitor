@@ -2,16 +2,38 @@ import type { NextRequest } from "next/server";
 import { fetchAllNews } from "@/lib/providers/news";
 import { fetchMarketQuotes, fetchQuote } from "@/lib/providers/yahoo-finance";
 import { symbolMap } from "@/lib/markets-watchlist";
+import { serverEnv } from "@/lib/env";
 
 export const runtime = "edge";
 
-const RAW_KEY = process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY || "";
-const IS_GROQ = RAW_KEY.startsWith("gsk_");
-const AI_API_KEY = RAW_KEY;
+// Resolves against the project's real AI Gateway env contract
+// (GROQ_API_KEY / OPENROUTER_API_KEY, both OpenAI-compatible chat APIs),
+// with OPENAI_API_KEY supported as a direct override if explicitly set.
+// NOTE: GEMINI_API_KEY exists in the env schema but is NOT wired here —
+// Gemini's native API isn't OpenAI-chat-completions-compatible without
+// a separate adapter. Flagged as a known gap, not silently pretended to work.
+const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
+const GROQ_KEY = serverEnv.GROQ_API_KEY || "";
+const OPENROUTER_KEY = serverEnv.OPENROUTER_API_KEY || "";
+
+const AI_API_KEY = OPENAI_KEY || GROQ_KEY || OPENROUTER_KEY;
+const PROVIDER = OPENAI_KEY ? "openai" : GROQ_KEY ? "groq" : OPENROUTER_KEY ? "openrouter" : "none";
+
 const AI_BASE_URL =
   process.env.AI_BASE_URL ||
-  (IS_GROQ ? "https://api.groq.com/openai/v1" : "https://api.openai.com/v1");
-const AI_MODEL = process.env.AI_MODEL || (IS_GROQ ? "llama-3.3-70b-versatile" : "gpt-4o-mini");
+  (PROVIDER === "groq"
+    ? "https://api.groq.com/openai/v1"
+    : PROVIDER === "openrouter"
+      ? "https://openrouter.ai/api/v1"
+      : "https://api.openai.com/v1");
+
+const AI_MODEL =
+  process.env.AI_MODEL ||
+  (PROVIDER === "groq"
+    ? "llama-3.3-70b-versatile"
+    : PROVIDER === "openrouter"
+      ? "openai/gpt-4o-mini"
+      : "gpt-4o-mini");
 
 function detectIntent(message: string): "news" | "markets" | "general" {
   const m = message.toLowerCase();
@@ -25,20 +47,35 @@ function detectIntent(message: string): "news" | "markets" | "general" {
   return "general";
 }
 
-/* ── Build grounding context ──────────────────────────────── */
 async function buildGrounding(intent: "news" | "markets" | "general", message: string) {
-  /* ── News ─────────────────────────────────────────────── */
   if (intent === "news") {
     const query = message.replace(/news|headlines|happening|updates?/gi, "").trim();
     const { articles } = await fetchAllNews(query || undefined);
     if (articles.length === 0) return { context: "", citations: [] };
 
-    const context = articles
-      .slice(0, 8)
+    // fetchAllNews() only filters Guardian by query — the RSS aggregator
+    // returns everything unfiltered, so without this extra pass, whichever
+    // feed posted most recently dominates the citation list regardless of
+    // topic relevance. Filter to articles actually mentioning the query terms.
+    let relevant = articles;
+    if (query) {
+      const terms = query
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((t) => t.length > 2);
+      const matched = articles.filter((a) => {
+        const text = (a.title + " " + a.summary).toLowerCase();
+        return terms.some((t) => text.includes(t));
+      });
+      if (matched.length > 0) relevant = matched;
+    }
+
+    const top = relevant.slice(0, 8);
+    const context = top
       .map((a, i) => `[${i + 1}] ${a.title} — ${a.source} (${a.publishedAt})\n${a.summary}`)
       .join("\n\n");
 
-    const citations = articles.slice(0, 8).map((a) => ({
+    const citations = top.map((a) => ({
       title: a.title,
       source: a.source,
       url: a.url,
@@ -48,31 +85,27 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
     return { context, citations };
   }
 
-  /* ── Markets ──────────────────────────────────────────── */
   if (intent === "markets") {
     const msgUpper = message.toUpperCase();
     const matchedSymbols = new Set<string>();
 
-    // Resolve via alias map
     for (const [alias, item] of symbolMap.entries()) {
       if (msgUpper.includes(alias)) matchedSymbols.add(item.symbol);
     }
 
-    // Also check raw tokens
     const rawTokens = msgUpper.split(/\s+/);
     for (const t of rawTokens) {
       const clean = t.replace(/[^A-Z./]/g, "");
-      if (clean && symbolMap.has(clean)) matchedSymbols.add(symbolMap.get(clean)!.symbol);
+      const entry = clean ? symbolMap.get(clean) : undefined;
+      if (entry) matchedSymbols.add(entry.symbol);
     }
 
-    // Fetch specific matches
     const specificQuotes = [];
     for (const sym of Array.from(matchedSymbols).slice(0, 3)) {
       const q = await fetchQuote(sym);
       if (q) specificQuotes.push(q);
     }
 
-    // Fetch broad watchlist
     const { quotes: allQuotes } = await fetchMarketQuotes();
 
     const lines: string[] = [];
@@ -87,8 +120,7 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
       }
     }
 
-    // Always include USD/INR + GLD for commodity context
-    const alwaysInclude = ["USD/INR", "GLD", "BTC/USD"];
+    const alwaysInclude = ["USD/INR", "GLD", "BTC-USD"];
     const extras = allQuotes.filter(
       (q) => alwaysInclude.includes(q.symbol) && !matchedSymbols.has(q.symbol),
     );
@@ -102,7 +134,6 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
       }
     }
 
-    // Broad market snapshot
     const broad = allQuotes
       .filter((q) => !matchedSymbols.has(q.symbol) && !alwaysInclude.includes(q.symbol))
       .slice(0, 12);
@@ -126,7 +157,6 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
   return { context: "", citations: [] };
 }
 
-/* ── POST handler ────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -144,9 +174,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!AI_API_KEY) {
-      return new Response(JSON.stringify({ error: "No AI API key configured. Check .env.local" }), {
-        status: 503,
-      });
+      return new Response(
+        JSON.stringify({
+          error:
+            "No AI API key configured. Set GROQ_API_KEY or OPENROUTER_API_KEY in .env.local (GEMINI_API_KEY is not yet wired to this route).",
+        }),
+        { status: 503 },
+      );
     }
 
     const intent = detectIntent(message);
@@ -164,11 +198,11 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
 
     const messages = [
       { role: "system", content: systemPrompt },
-      ...(body.history || []).slice(-6),
+      ...(Array.isArray(body.history) ? body.history.slice(-6) : []),
       { role: "user", content: message },
     ];
 
-    console.warn("[COPILOT] Provider:", IS_GROQ ? "Groq" : "OpenAI");
+    console.warn("[COPILOT] Provider:", PROVIDER);
     console.warn("[COPILOT] Model:", AI_MODEL);
 
     const aiRes = await fetch(`${AI_BASE_URL}/chat/completions`, {
