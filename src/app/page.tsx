@@ -42,6 +42,13 @@ export default async function HomeCommandDeck() {
       desc: "· Cables & outages",
     },
     { href: "/power-structure", label: "Power Structure", icon: "♛", desc: "· Wikidata live" },
+    { href: "/space", label: "Space Tracker", icon: "☄", desc: "· Launch library" },
+    {
+      href: "/signal-freedom",
+      label: "Signal & Freedom Indices",
+      icon: "📊",
+      desc: "· Press freedom data",
+    },
     { href: "/watchlist", label: "Watchlist", icon: "★", desc: "· Alerts & saves" },
   ];
 

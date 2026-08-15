@@ -69,6 +69,18 @@ export function CommandPalette() {
         hint: "",
         action: () => router.push("/watchlist"),
       },
+      {
+        id: "space",
+        label: "Go to Space & Orbital Tracker",
+        hint: "",
+        action: () => router.push("/space"),
+      },
+      {
+        id: "signal-freedom",
+        label: "Go to Signal & Freedom Indices",
+        hint: "",
+        action: () => router.push("/signal-freedom"),
+      },
     ],
     [router],
   );
