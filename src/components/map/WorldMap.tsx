@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { countries, type Country } from "@/lib/countries";
 import { disputedTerritories } from "@/lib/disputed-territories";
 import { sampleUnrestEvents } from "@/lib/unrest-events";
+import type { CountryLocation } from "@/lib/providers/country-locations";
 
 const countryIcon = L.divIcon({
   className: "",
@@ -58,6 +59,7 @@ interface QuakeEvent {
   depth: number;
   time: string;
 }
+
 interface CableLanding {
   id: string;
   name: string;
@@ -76,6 +78,8 @@ interface WorldMapProps {
   cableLandings?: CableLanding[];
   center?: [number, number];
   zoom?: number;
+  showAllCountries?: boolean;
+  allCountries?: CountryLocation[];
 }
 
 function MapController({ center, zoom }: { center?: [number, number]; zoom?: number }) {
@@ -96,6 +100,8 @@ export function WorldMap({
   cableLandings = [],
   center = [20, 0],
   zoom = 2,
+  showAllCountries = false,
+  allCountries = [],
 }: WorldMapProps) {
   return (
     <MapContainer
@@ -192,6 +198,15 @@ export function WorldMap({
                   Cables: {c.cables.join(", ")}
                 </div>
               </div>
+            </Popup>
+          </Marker>
+        ))}
+
+      {showAllCountries &&
+        allCountries.map((c) => (
+          <Marker key={c.code} position={[c.lat, c.lng]} icon={countryIcon}>
+            <Popup>
+              <div style={{ fontFamily: "monospace", fontSize: "12px" }}>{c.name}</div>
             </Popup>
           </Marker>
         ))}

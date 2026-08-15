@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { StatusBar, CommandPalette } from "@/components/terminal";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -21,6 +21,13 @@ interface QuakeEvent {
   lng: number;
   depth: number;
   time: string;
+}
+
+interface CountryLocation {
+  code: string;
+  name: string;
+  lat: number;
+  lng: number;
 }
 
 function LayerToggle({
@@ -52,8 +59,19 @@ export default function MapPage() {
   const [showUnrest, setShowUnrest] = useState(false);
   const [showQuakes, setShowQuakes] = useState(false);
   const [showCables, setShowCables] = useState(false);
+  const [showAllCountries, setShowAllCountries] = useState(false);
+  const [allCountries, setAllCountries] = useState<CountryLocation[]>([]);
   const [quakes, setQuakes] = useState<QuakeEvent[]>([]);
   const [loadingQuakes, setLoadingQuakes] = useState(false);
+
+  useEffect(() => {
+    if (showAllCountries && allCountries.length === 0) {
+      fetch("/api/countries/locations")
+        .then((res) => res.json())
+        .then((data) => setAllCountries(data.locations || []))
+        .catch(() => setAllCountries([]));
+    }
+  }, [showAllCountries, allCountries.length]);
 
   const handleToggleQuakes = async () => {
     const next = !showQuakes;
@@ -102,6 +120,11 @@ export default function MapPage() {
               active={showCables}
               onToggle={() => setShowCables((v) => !v)}
             />
+            <LayerToggle
+              label="All Countries"
+              active={showAllCountries}
+              onToggle={() => setShowAllCountries((v) => !v)}
+            />
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <CountryDossier country={selected} />
             </div>
@@ -115,6 +138,8 @@ export default function MapPage() {
               quakes={quakes}
               showCables={showCables}
               cableLandings={cableLandings}
+              showAllCountries={showAllCountries}
+              allCountries={allCountries}
             />
           </div>
         </div>
