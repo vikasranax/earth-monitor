@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 // One entry per country — avoids showing the same person twice when they
 // hold both roles (e.g. Nigeria's president holds both HoS and HoG).
-const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "GB", "UA"];
+const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "IR", "KP"];
 
 const TENSION_REGION_IDS = [
   "taiwan-strait",

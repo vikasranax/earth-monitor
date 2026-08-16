@@ -4,9 +4,10 @@ import { fontVariables } from "@/lib/fonts";
 import { serverEnv } from "@/lib/env";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { CopilotButton } from "@/components/copilot/CopilotButton";
+import { MediaButton } from "@/components/widgets/MediaButton";
 import { AlertBanner } from "@/components/alerts/AlertBanner";
 import "./global.css";
-import "leaflet/dist/leaflet.css"; // ← add this here
+import "leaflet/dist/leaflet.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(serverEnv.SITE_URL),
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AlertBanner />
         <ErrorBoundary>{children}</ErrorBoundary>
         <CopilotButton />
+        <MediaButton />
       </body>
     </html>
   );

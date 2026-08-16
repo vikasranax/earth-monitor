@@ -6,7 +6,14 @@ const isProd = process.env.NODE_ENV === "production";
 const cspDirectives = {
   "default-src": ["'self'"],
   // Next.js requires 'unsafe-inline'/'unsafe-eval' for dev HMR and styled-jsx; tightened in M13.
-  "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://s3.tradingview.com"],
+  "script-src": [
+    "'self'",
+    "'unsafe-inline'",
+    "'unsafe-eval'",
+    "https://s3.tradingview.com",
+    "https://www.youtube.com",
+    "https://s.ytimg.com",
+  ],
   "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
   "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
   "img-src": ["'self'", "data:", "blob:", "https:"],
@@ -20,7 +27,12 @@ const cspDirectives = {
     "wss://*.firebaseio.com",
     "https://*.firebaseapp.com",
   ],
-  "frame-src": ["https://s.tradingview.com", "https://*.tradingview.com", "https://www.youtube-nocookie.com"],
+  "frame-src": [
+    "https://s.tradingview.com",
+    "https://*.tradingview.com",
+    "https://www.youtube-nocookie.com",
+    "https://www.youtube.com",
+  ],
   "worker-src": ["'self'", "blob:"],
   "object-src": ["'none'"],
   "base-uri": ["'self'"],
