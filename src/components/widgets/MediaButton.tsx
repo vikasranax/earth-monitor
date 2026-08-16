@@ -3,29 +3,30 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
-function WaveBars() {
-  const heights = [0.5, 0.85, 0.6, 1, 0.7, 0.9, 0.55, 0.75, 0.45];
+// A small flowing wave line — reads as water/sound ripple rather than
+// seismic activity (avoided, since it sat next to the Hazard/earthquake
+// layer and looked like a quake signal). Animates by morphing between two
+// phase-shifted curve shapes when playing; stays static when idle.
+function FlowingWave({ animated }: { animated: boolean }) {
+  const pathA = "M1 7 C 3 3, 5 3, 7 7 C 9 11, 11 11, 13 7 C 15 3, 17 3, 19 7 C 21 11, 23 11, 25 7";
+  const pathB = "M1 7 C 3 11, 5 11, 7 7 C 9 3, 11 3, 13 7 C 15 11, 17 11, 19 7 C 21 3, 23 3, 25 7";
   return (
-    <div className="flex items-end gap-[2px] h-3">
-      {heights.map((h, i) => (
-        <motion.div
-          key={i}
-          className="w-[2px] rounded-full bg-current"
-          animate={{ scaleY: [0.2, h, 0.2] }}
-          transition={{
-            repeat: Infinity,
-            repeatType: "reverse",
-            duration: 0.35 + i * 0.04,
-            ease: "easeInOut",
-          }}
-          style={{ originY: 1, height: "100%" }}
-        />
-      ))}
-    </div>
+    <svg width="20" height="11" viewBox="0 0 26 14" fill="none">
+      <motion.path
+        d={pathA}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        animate={animated ? { d: [pathA, pathB, pathA] } : { d: pathA }}
+        transition={
+          animated ? { repeat: Infinity, duration: 1.2, ease: "easeInOut" } : { duration: 0 }
+        }
+      />
+    </svg>
   );
 }
 
-const YT_PLAYLIST_ID = "PLVPt7YJKnZJCUE9WQ0ffocb0NJJ5sHjcS";
+const YT_PLAYLIST_ID = "PLVPt7YJKnZJALE1CRwBxiIUEJQN0XDfHy";
 const YT_VIDEO_ID = "";
 
 interface YTPlayerInstance {
@@ -78,7 +79,7 @@ export function MediaButton() {
   const [status, setStatus] = useState<Status>("loading");
   const [errorCode, setErrorCode] = useState<number | null>(null);
   const playerRef = useRef<YTPlayerInstance | null>(null);
-  const containerId = "aetheria-yt-player";
+  const containerId = "indrisma-yt-player";
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -103,12 +104,6 @@ export function MediaButton() {
         },
       };
 
-      // Build options WITHOUT a `videoId` key at all when in playlist mode —
-      // even `videoId: undefined` being present as a key (rather than
-      // omitted entirely) makes YouTube's widget API throw "Invalid video
-      // id", since it checks key presence, not truthiness. Same logic
-      // applied to playerVars: only include the keys actually relevant to
-      // the current mode.
       if (YT_VIDEO_ID) {
         playerRef.current = new window.YT.Player(containerId, {
           height: "1",
@@ -143,10 +138,15 @@ export function MediaButton() {
   }, [status]);
 
   const disabled = status === "loading" || status === "error";
-  const label = status === "error" ? "PLAYBACK ERROR" : status === "loading" ? "..." : "AETHERIA";
+  const tooltip =
+    status === "error"
+      ? "INDRISMA — playback error" + (errorCode ? " (code " + errorCode + ")" : "")
+      : status === "loading"
+        ? "INDRISMA — loading…"
+        : status === "playing"
+          ? "INDRISMA — playing (click to pause)"
+          : "INDRISMA — click to play";
 
-  const baseClass =
-    "fixed bottom-6 left-6 z-40 flex items-center justify-center px-4 py-3 rounded-full font-mono text-xs font-semibold shadow-lg transition-all min-w-[110px] disabled:opacity-50";
   const colorClass =
     status === "error"
       ? "bg-[var(--danger)] text-white"
@@ -156,10 +156,25 @@ export function MediaButton() {
 
   return (
     <>
-      <button onClick={toggle} disabled={disabled} className={baseClass + " " + colorClass} title={errorCode ? "YouTube error code: " + errorCode : undefined}>
-        {status === "playing" ? <WaveBars /> : <span>{label}</span>}
+      {/* Fixed small circle at every state — a wide text pill was the
+          actual space problem on mobile, not just the playing-state icon. */}
+      <button
+        onClick={toggle}
+        disabled={disabled}
+        title={tooltip}
+        aria-label={tooltip}
+        className={
+          "fixed bottom-6 left-6 z-40 flex items-center justify-center w-10 h-10 rounded-full shadow-lg transition-all disabled:opacity-50 " +
+          colorClass
+        }
+      >
+        <FlowingWave animated={status === "playing"} />
       </button>
-      <div id={containerId} className="fixed opacity-0 pointer-events-none" style={{ width: 1, height: 1, bottom: 0, left: 0 }} />
+      <div
+        id={containerId}
+        className="fixed opacity-0 pointer-events-none"
+        style={{ width: 1, height: 1, bottom: 0, left: 0 }}
+      />
     </>
   );
 }
