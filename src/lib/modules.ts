@@ -42,4 +42,10 @@ export const modules: ModuleInfo[] = [
   { id: "M29", name: "On This Day in Geopolitics", status: "standby" },
   { id: "M30", name: "Saved Views & Custom Dashboards", status: "standby" },
   { id: "M31", name: "Watchlist Push Notifications", status: "standby" },
+  { id: "M32", name: "Day/Night Terminator", status: "standby" },
+  { id: "M33", name: "Live Webcams", status: "standby" },
+  { id: "M34", name: "Military & Nuclear Site Markers", status: "standby" },
+  { id: "M35", name: "Critical Minerals & Energy Infrastructure", status: "standby" },
+  { id: "M36", name: "Sanctions Layer", status: "standby" },
+  { id: "M37", name: "Composite Country Instability Index", status: "standby" },
 ];

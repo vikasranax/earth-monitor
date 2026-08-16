@@ -6,6 +6,7 @@ import { StatusBar, CommandPalette } from "@/components/terminal";
 import { ThemeProvider } from "@/components/theme-provider";
 import { CountryDossier } from "@/components/map/CountryDossier";
 import { cableLandings } from "@/lib/cable-landings";
+import { placesToVisit } from "@/lib/places-to-visit";
 import type { Country } from "@/lib/countries";
 
 const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
@@ -53,13 +54,40 @@ function LayerToggle({
   );
 }
 
+function BaseLayerControl({
+  baseLayer,
+  onChange,
+}: {
+  baseLayer: "dark" | "satellite";
+  onChange: (v: "dark" | "satellite") => void;
+}) {
+  return (
+    <div className="flex gap-1 p-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)]">
+      <button
+        onClick={() => onChange("dark")}
+        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "dark" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}
+      >
+        Dark
+      </button>
+      <button
+        onClick={() => onChange("satellite")}
+        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "satellite" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}
+      >
+        Satellite
+      </button>
+    </div>
+  );
+}
+
 export default function MapPage() {
   const [selected, setSelected] = useState<Country | null>(null);
+  const [baseLayer, setBaseLayer] = useState<"dark" | "satellite">("dark");
   const [showDisputed, setShowDisputed] = useState(true);
   const [showUnrest, setShowUnrest] = useState(false);
   const [showQuakes, setShowQuakes] = useState(false);
   const [showCables, setShowCables] = useState(false);
   const [showAllCountries, setShowAllCountries] = useState(false);
+  const [showPlaces, setShowPlaces] = useState(false);
   const [allCountries, setAllCountries] = useState<CountryLocation[]>([]);
   const [quakes, setQuakes] = useState<QuakeEvent[]>([]);
   const [loadingQuakes, setLoadingQuakes] = useState(false);
@@ -98,6 +126,11 @@ export default function MapPage() {
         <div className="flex-1 flex flex-col md:flex-row gap-0">
           <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3">
             <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">
+              Base Layer
+            </div>
+            <BaseLayerControl baseLayer={baseLayer} onChange={setBaseLayer} />
+
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mt-2 mb-1">
               Map Layers
             </div>
             <LayerToggle
@@ -125,6 +158,11 @@ export default function MapPage() {
               active={showAllCountries}
               onToggle={() => setShowAllCountries((v) => !v)}
             />
+            <LayerToggle
+              label="Places to Visit"
+              active={showPlaces}
+              onToggle={() => setShowPlaces((v) => !v)}
+            />
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <CountryDossier country={selected} />
             </div>
@@ -132,6 +170,7 @@ export default function MapPage() {
           <div className="flex-1 h-[500px] md:h-auto relative">
             <WorldMap
               onSelectCountry={setSelected}
+              baseLayer={baseLayer}
               showDisputed={showDisputed}
               showUnrest={showUnrest}
               showQuakes={showQuakes}
@@ -140,6 +179,8 @@ export default function MapPage() {
               cableLandings={cableLandings}
               showAllCountries={showAllCountries}
               allCountries={allCountries}
+              showPlaces={showPlaces}
+              placesToVisit={placesToVisit}
             />
           </div>
         </div>

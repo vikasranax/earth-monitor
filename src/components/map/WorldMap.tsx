@@ -50,6 +50,13 @@ const cableIcon = L.divIcon({
   iconAnchor: [4, 4],
 });
 
+const placeIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:10px;height:10px;background:var(--ok);transform:rotate(45deg);box-shadow:0 0 8px var(--ok);border:1px solid rgba(255,255,255,0.4);"></div>`,
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
+});
+
 interface QuakeEvent {
   id: string;
   place: string;
@@ -68,8 +75,18 @@ interface CableLanding {
   cables: string[];
 }
 
+interface PlaceToVisit {
+  id?: string;
+  name: string;
+  lat: number;
+  lng: number;
+  country?: string;
+  description?: string;
+}
+
 interface WorldMapProps {
   onSelectCountry: (country: Country) => void;
+  baseLayer?: "dark" | "satellite";
   showDisputed?: boolean;
   showUnrest?: boolean;
   showQuakes?: boolean;
@@ -80,6 +97,8 @@ interface WorldMapProps {
   zoom?: number;
   showAllCountries?: boolean;
   allCountries?: CountryLocation[];
+  showPlaces?: boolean;
+  placesToVisit?: PlaceToVisit[];
 }
 
 function MapController({ center, zoom }: { center?: [number, number]; zoom?: number }) {
@@ -93,6 +112,7 @@ function MapController({ center, zoom }: { center?: [number, number]; zoom?: num
 export function WorldMap({
   onSelectCountry,
   showDisputed = true,
+  baseLayer = "dark",
   showUnrest = false,
   showQuakes = false,
   quakes = [],
@@ -102,6 +122,8 @@ export function WorldMap({
   zoom = 2,
   showAllCountries = false,
   allCountries = [],
+  showPlaces = false,
+  placesToVisit = [],
 }: WorldMapProps) {
   return (
     <MapContainer
@@ -112,10 +134,17 @@ export function WorldMap({
       worldCopyJump
     >
       <MapController center={center} zoom={zoom} />
-      <TileLayer
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-      />
+      {baseLayer === "dark" ? (
+        <TileLayer
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        />
+      ) : (
+        <TileLayer
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+          attribution="Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics"
+        />
+      )}
 
       {countries.map((c) => (
         <Marker
@@ -207,6 +236,23 @@ export function WorldMap({
           <Marker key={c.code} position={[c.lat, c.lng]} icon={countryIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px" }}>{c.name}</div>
+            </Popup>
+          </Marker>
+        ))}
+
+      {showPlaces &&
+        placesToVisit.map((p) => (
+          <Marker key={p.id ?? p.name} position={[p.lat, p.lng]} icon={placeIcon}>
+            <Popup>
+              <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "160px" }}>
+                <strong style={{ color: "var(--ok)" }}>{p.name}</strong>
+                {p.country && (
+                  <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{p.country}</div>
+                )}
+                {p.description && (
+                  <div style={{ marginTop: "4px", color: "var(--fg-1)" }}>{p.description}</div>
+                )}
+              </div>
             </Popup>
           </Marker>
         ))}
