@@ -55,6 +55,7 @@ export default async function HomeCommandDeck() {
       desc: "· Press freedom data",
     },
     { href: "/watchlist", label: "Watchlist", icon: "★", desc: "· Alerts & saves" },
+    { href: "/elections", label: "Elections", icon: "🗳", desc: "· Calendar & results" },
   ];
 
   return (

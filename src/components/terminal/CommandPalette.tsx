@@ -81,6 +81,12 @@ export function CommandPalette() {
         hint: "",
         action: () => router.push("/signal-freedom"),
       },
+      {
+        id: "elections",
+        label: "Go to Elections Calendar",
+        hint: "",
+        action: () => router.push("/elections"),
+      },
     ],
     [router],
   );

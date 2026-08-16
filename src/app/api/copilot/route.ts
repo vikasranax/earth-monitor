@@ -2,16 +2,11 @@ import type { NextRequest } from "next/server";
 import { fetchAllNews } from "@/lib/providers/news";
 import { fetchMarketQuotes, fetchQuote } from "@/lib/providers/yahoo-finance";
 import { symbolMap } from "@/lib/markets-watchlist";
+import { fetchPowerStructure } from "@/lib/providers/power-structure";
 import { serverEnv } from "@/lib/env";
 
 export const runtime = "edge";
 
-// Resolves against the project's real AI Gateway env contract
-// (GROQ_API_KEY / OPENROUTER_API_KEY, both OpenAI-compatible chat APIs),
-// with OPENAI_API_KEY supported as a direct override if explicitly set.
-// NOTE: GEMINI_API_KEY exists in the env schema but is NOT wired here —
-// Gemini's native API isn't OpenAI-chat-completions-compatible without
-// a separate adapter. Flagged as a known gap, not silently pretended to work.
 const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const GROQ_KEY = serverEnv.GROQ_API_KEY || "";
 const OPENROUTER_KEY = serverEnv.OPENROUTER_API_KEY || "";
@@ -35,8 +30,16 @@ const AI_MODEL =
       ? "openai/gpt-4o-mini"
       : "gpt-4o-mini");
 
-function detectIntent(message: string): "news" | "markets" | "general" {
+type Intent = "news" | "markets" | "power" | "general";
+
+function detectIntent(message: string): Intent {
   const m = message.toLowerCase();
+  if (
+    /\b(president|prime minister|\bpm\b|premier|head of state|head of government|monarch|king|queen|emperor|chancellor|who rules|who leads|who governs|who is in charge|in power|dictator)\b/.test(
+      m,
+    )
+  )
+    return "power";
   if (/\b(news|headlines|happening|going on|report|article|updates?)\b/.test(m)) return "news";
   if (
     /\b(market|stock|price|crypto|bitcoin|oil|gold|fx|forex|trading|index|nasdaq|sp500|s&p|equity|share|rupee|rupees|nifty|sensex|dollar|yen|won|yuan|renminbi|ether|inr|riyal|dirham|shekel|real|peso|loonie|ruble|rouble|rand|naira|pound|sterling|euro|bovespa|merval|nikkei|kospi|dax|cac|ftse|ibex|mib|jse|sti|klci|psei|jci|set|ipc)\b/.test(
@@ -47,22 +50,15 @@ function detectIntent(message: string): "news" | "markets" | "general" {
   return "general";
 }
 
-async function buildGrounding(intent: "news" | "markets" | "general", message: string) {
+async function buildGrounding(intent: Intent, message: string) {
   if (intent === "news") {
     const query = message.replace(/news|headlines|happening|updates?/gi, "").trim();
     const { articles } = await fetchAllNews(query || undefined);
     if (articles.length === 0) return { context: "", citations: [] };
 
-    // fetchAllNews() only filters Guardian by query — the RSS aggregator
-    // returns everything unfiltered, so without this extra pass, whichever
-    // feed posted most recently dominates the citation list regardless of
-    // topic relevance. Filter to articles actually mentioning the query terms.
     let relevant = articles;
     if (query) {
-      const terms = query
-        .toLowerCase()
-        .split(/\s+/)
-        .filter((t) => t.length > 2);
+      const terms = query.toLowerCase().split(/\s+/).filter((t) => t.length > 2);
       const matched = articles.filter((a) => {
         const text = (a.title + " " + a.summary).toLowerCase();
         return terms.some((t) => text.includes(t));
@@ -83,6 +79,26 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
     }));
 
     return { context, citations };
+  }
+
+  if (intent === "power") {
+    const { leaders, error } = await fetchPowerStructure();
+    if (error || leaders.length === 0) {
+      return { context: "Power structure data temporarily unavailable.", citations: [] };
+    }
+
+    const msgLower = message.toLowerCase();
+    const matched = leaders.filter((l) => msgLower.includes(l.countryName.toLowerCase()));
+    const relevant = matched.length > 0 ? matched : leaders.slice(0, 20);
+
+    const lines = relevant.map((l) => {
+      const roleLabel = l.role === "head_of_state" ? "Head of State" : "Head of Government";
+      const sinceNote = l.since ? " (in office since " + l.since + ")" : "";
+      return l.countryName + " (" + l.countryCode + ") — " + roleLabel + ": " + l.personName + sinceNote;
+    });
+
+    const context = "Source: Wikidata, live query.\n" + lines.join("\n");
+    return { context, citations: [] };
   }
 
   if (intent === "markets") {
@@ -107,43 +123,32 @@ async function buildGrounding(intent: "news" | "markets" | "general", message: s
     }
 
     const { quotes: allQuotes } = await fetchMarketQuotes();
-
     const lines: string[] = [];
 
     if (specificQuotes.length > 0) {
       lines.push("--- SPECIFIC ASSETS ---");
       for (const q of specificQuotes) {
         const arrow = q.percentChange >= 0 ? "▲" : "▼";
-        lines.push(
-          `${q.label} (${q.symbol}): ${q.price.toFixed(2)} ${q.currency} ${arrow} ${q.percentChange.toFixed(2)}%`,
-        );
+        lines.push(q.label + " (" + q.symbol + "): " + q.price.toFixed(2) + " " + q.currency + " " + arrow + " " + q.percentChange.toFixed(2) + "%");
       }
     }
 
     const alwaysInclude = ["USD/INR", "GLD", "BTC-USD"];
-    const extras = allQuotes.filter(
-      (q) => alwaysInclude.includes(q.symbol) && !matchedSymbols.has(q.symbol),
-    );
+    const extras = allQuotes.filter((q) => alwaysInclude.includes(q.symbol) && !matchedSymbols.has(q.symbol));
     if (extras.length > 0) {
       lines.push("--- REFERENCE RATES ---");
       for (const q of extras) {
         const arrow = q.percentChange >= 0 ? "▲" : "▼";
-        lines.push(
-          `${q.label} (${q.symbol}): ${q.price.toFixed(2)} ${q.currency} ${arrow} ${q.percentChange.toFixed(2)}%`,
-        );
+        lines.push(q.label + " (" + q.symbol + "): " + q.price.toFixed(2) + " " + q.currency + " " + arrow + " " + q.percentChange.toFixed(2) + "%");
       }
     }
 
-    const broad = allQuotes
-      .filter((q) => !matchedSymbols.has(q.symbol) && !alwaysInclude.includes(q.symbol))
-      .slice(0, 12);
+    const broad = allQuotes.filter((q) => !matchedSymbols.has(q.symbol) && !alwaysInclude.includes(q.symbol)).slice(0, 12);
     if (broad.length > 0) {
       lines.push("--- BROAD MARKET ---");
       for (const q of broad) {
         const arrow = q.percentChange >= 0 ? "▲" : "▼";
-        lines.push(
-          `${q.label} (${q.symbol}): ${q.price.toFixed(2)} ${q.currency} ${arrow} ${q.percentChange.toFixed(2)}%`,
-        );
+        lines.push(q.label + " (" + q.symbol + "): " + q.price.toFixed(2) + " " + q.currency + " " + arrow + " " + q.percentChange.toFixed(2) + "%");
       }
     }
 
@@ -164,21 +169,12 @@ export async function POST(req: NextRequest) {
 
     if (!message || typeof message !== "string") {
       console.warn("[COPILOT] Bad body keys:", Object.keys(body));
-      return new Response(
-        JSON.stringify({
-          error: "Message required",
-          receivedKeys: Object.keys(body),
-        }),
-        { status: 400 },
-      );
+      return new Response(JSON.stringify({ error: "Message required", receivedKeys: Object.keys(body) }), { status: 400 });
     }
 
     if (!AI_API_KEY) {
       return new Response(
-        JSON.stringify({
-          error:
-            "No AI API key configured. Set GROQ_API_KEY or OPENROUTER_API_KEY in .env.local (GEMINI_API_KEY is not yet wired to this route).",
-        }),
+        JSON.stringify({ error: "No AI API key configured. Set GROQ_API_KEY or OPENROUTER_API_KEY in .env.local." }),
         { status: 503 },
       );
     }
@@ -187,14 +183,14 @@ export async function POST(req: NextRequest) {
     const { context, citations } = await buildGrounding(intent, message);
 
     const systemPrompt = `You are Earth Copilot (जगत्-मन्थन), a real-time global intelligence assistant.
-You answer questions about geopolitics, markets, shipping, airspace, disasters, and infrastructure.
+You answer questions about geopolitics, markets, shipping, airspace, disasters, power structure, and infrastructure.
 Rules:
-- Every factual claim must cite a source using [1], [2], etc.
+- Every factual claim must cite a source using [1], [2], etc. when numbered sources are provided below.
 - If live data is provided below, ground your answer in it. If no live data is provided, answer from your training knowledge but do NOT claim it is live.
 - Respond in the same language the user writes in.
 - Be concise. No fluff.
 
-${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
+${context ? "--- LIVE DATA ---\n" + context + "\n--- END LIVE DATA ---" : ""}`;
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -202,34 +198,18 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
       { role: "user", content: message },
     ];
 
-    console.warn("[COPILOT] Provider:", PROVIDER);
-    console.warn("[COPILOT] Model:", AI_MODEL);
+    console.warn("[COPILOT] Provider:", PROVIDER, "Intent:", intent);
 
-    const aiRes = await fetch(`${AI_BASE_URL}/chat/completions`, {
+    const aiRes = await fetch(AI_BASE_URL + "/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${AI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages,
-        stream: true,
-        temperature: 0.4,
-        max_tokens: 800,
-      }),
+      headers: { Authorization: "Bearer " + AI_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: AI_MODEL, messages, stream: true, temperature: 0.4, max_tokens: 800 }),
     });
 
     if (!aiRes.ok) {
       const errText = await aiRes.text();
       console.warn("[COPILOT] AI HTTP", aiRes.status, errText);
-      return new Response(
-        JSON.stringify({
-          error: `AI service error ${aiRes.status}`,
-          detail: errText,
-        }),
-        { status: 502 },
-      );
+      return new Response(JSON.stringify({ error: "AI service error " + aiRes.status, detail: errText }), { status: 502 });
     }
 
     const headers = new Headers(aiRes.headers);
@@ -242,10 +222,7 @@ ${context ? `--- LIVE DATA ---\n${context}\n--- END LIVE DATA ---` : ""}`;
   } catch (err) {
     console.warn("[COPILOT] Unhandled error:", err);
     return new Response(
-      JSON.stringify({
-        error: "Copilot error",
-        detail: err instanceof Error ? err.message : String(err),
-      }),
+      JSON.stringify({ error: "Copilot error", detail: err instanceof Error ? err.message : String(err) }),
       { status: 500 },
     );
   }
