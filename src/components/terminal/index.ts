@@ -7,3 +7,4 @@ export * from "./RiskGauge";
 export * from "./DataTable";
 export * from "./CommandPalette";
 export * from "./OnThisDay";
+export * from "./WorldClock";

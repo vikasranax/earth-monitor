@@ -14,6 +14,7 @@ import {
   DataTable,
   Ticker,
   OnThisDay,
+  WorldClock,
 } from "@/components/terminal";
 
 // Curated for variety: two nuclear powers in active tension (RU/UA), the
@@ -139,6 +140,7 @@ export default async function HomeCommandDeck() {
           </Panel>
 
           <OnThisDay />
+          <WorldClock />
 
           <Panel title="Module Manifest" eyebrow="CAMPAIGN M01–M17">
             <DataTable<ModuleInfo>
