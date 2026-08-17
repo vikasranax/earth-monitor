@@ -91,6 +91,7 @@ export default function MapPage() {
   const [allCountries, setAllCountries] = useState<CountryLocation[]>([]);
   const [quakes, setQuakes] = useState<QuakeEvent[]>([]);
   const [loadingQuakes, setLoadingQuakes] = useState(false);
+  const [showDayNight, setShowDayNight] = useState(false);
 
   useEffect(() => {
     if (showAllCountries && allCountries.length === 0) {
@@ -163,6 +164,11 @@ export default function MapPage() {
               active={showPlaces}
               onToggle={() => setShowPlaces((v) => !v)}
             />
+            <LayerToggle
+              label="Day/Night"
+              active={showDayNight}
+              onToggle={() => setShowDayNight((v) => !v)}
+            />
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <CountryDossier country={selected} />
             </div>
@@ -181,6 +187,7 @@ export default function MapPage() {
               allCountries={allCountries}
               showPlaces={showPlaces}
               placesToVisit={placesToVisit}
+              showDayNight={showDayNight}
             />
           </div>
         </div>

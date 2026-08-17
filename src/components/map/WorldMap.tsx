@@ -7,6 +7,7 @@ import { countries, type Country } from "@/lib/countries";
 import { disputedTerritories } from "@/lib/disputed-territories";
 import { sampleUnrestEvents } from "@/lib/unrest-events";
 import type { CountryLocation } from "@/lib/providers/country-locations";
+import { DayNightLayer } from "@/components/map/DayNightLayer";
 
 const countryIcon = L.divIcon({
   className: "",
@@ -99,6 +100,7 @@ interface WorldMapProps {
   allCountries?: CountryLocation[];
   showPlaces?: boolean;
   placesToVisit?: PlaceToVisit[];
+  showDayNight?: boolean;
 }
 
 function MapController({ center, zoom }: { center?: [number, number]; zoom?: number }) {
@@ -124,6 +126,7 @@ export function WorldMap({
   allCountries = [],
   showPlaces = false,
   placesToVisit = [],
+  showDayNight = false,
 }: WorldMapProps) {
   return (
     <MapContainer
@@ -134,6 +137,7 @@ export function WorldMap({
       worldCopyJump
     >
       <MapController center={center} zoom={zoom} />
+      {showDayNight && <DayNightLayer />}
       {baseLayer === "dark" ? (
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
