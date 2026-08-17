@@ -13,6 +13,7 @@ import {
   RiskGauge,
   DataTable,
   Ticker,
+  OnThisDay,
 } from "@/components/terminal";
 
 // Curated for variety: two nuclear powers in active tension (RU/UA), the
@@ -136,6 +137,8 @@ export default async function HomeCommandDeck() {
               })}
             </div>
           </Panel>
+
+          <OnThisDay />
 
           <Panel title="Module Manifest" eyebrow="CAMPAIGN M01–M17">
             <DataTable<ModuleInfo>
