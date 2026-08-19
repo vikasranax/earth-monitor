@@ -1,6 +1,6 @@
 import { fetchGuardianNews } from "@/lib/providers/guardian";
 import { fetchAirspaceSnapshot } from "@/lib/providers/opensky";
-import { sampleUnrestEvents } from "@/lib/unrest-events";
+import { fetchLiveUnrest } from "@/lib/providers/unrest-live";
 import { disputedTerritories } from "@/lib/disputed-territories";
 import { ThemeProvider } from "@/components/theme-provider";
 import { StatusBar, CommandPalette, Panel, KpiCard, LedBadge } from "@/components/terminal";
@@ -15,9 +15,10 @@ const TENSION_REGION_IDS = [
 ];
 
 export default async function ConflictWatchPage() {
-  const [news, airspace] = await Promise.all([
+  const [news, airspace, unrest] = await Promise.all([
     fetchGuardianNews("conflict OR war OR military OR unrest"),
     fetchAirspaceSnapshot(),
+    fetchLiveUnrest(),
   ]);
 
   const tensionCounts = airspace.regionCounts.filter((r) =>
@@ -36,7 +37,7 @@ export default async function ConflictWatchPage() {
               label="Disputed Territories Tracked"
               value={String(disputedTerritories.length)}
             />
-            <KpiCard label="Unrest Markers (Sample)" value={String(sampleUnrestEvents.length)} />
+            <KpiCard label="Unrest Countries (Live)" value={String(unrest.markers.length)} />
           </div>
 
           <Panel
