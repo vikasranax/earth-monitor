@@ -9,7 +9,7 @@ import { cableLandings } from "@/lib/cable-landings";
 import { placesToVisit } from "@/lib/places-to-visit";
 import { architectureSites } from "@/lib/architecture-wonders";
 import type { Country } from "@/lib/countries";
-import type { UnrestMarker } from "@/lib/providers/unrest-live";
+import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 
 const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
   ssr: false,
@@ -33,19 +33,36 @@ interface CountryLocation {
   lng: number;
 }
 
-function LayerToggle({ label, active, onToggle }: { label: string; active: boolean; onToggle: () => void }) {
+function LayerToggle({
+  label,
+  active,
+  onToggle,
+}: {
+  label: string;
+  active: boolean;
+  onToggle: () => void;
+}) {
   return (
     <button
       onClick={onToggle}
       className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"}`}
     >
       <span>{label}</span>
-      <span className="w-2 h-2 rounded-full" style={{ background: active ? "var(--accent)" : "var(--fg-muted)" }} />
+      <span
+        className="w-2 h-2 rounded-full"
+        style={{ background: active ? "var(--accent)" : "var(--fg-muted)" }}
+      />
     </button>
   );
 }
 
-function BaseLayerControl({ baseLayer, onChange }: { baseLayer: "dark" | "satellite"; onChange: (v: "dark" | "satellite") => void }) {
+function BaseLayerControl({
+  baseLayer,
+  onChange,
+}: {
+  baseLayer: "dark" | "satellite";
+  onChange: (v: "dark" | "satellite") => void;
+}) {
   return (
     <div className="flex gap-1 p-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)]">
       <button
@@ -136,11 +153,19 @@ export default function MapPage() {
         <StatusBar />
         <div className="flex-1 flex flex-col md:flex-row gap-0">
           <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">Base Layer</div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">
+              Base Layer
+            </div>
             <BaseLayerControl baseLayer={baseLayer} onChange={setBaseLayer} />
 
-            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mt-2 mb-1">Map Layers</div>
-            <LayerToggle label="Disputed Territories" active={showDisputed} onToggle={() => setShowDisputed((v) => !v)} />
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mt-2 mb-1">
+              Map Layers
+            </div>
+            <LayerToggle
+              label="Disputed Territories"
+              active={showDisputed}
+              onToggle={() => setShowDisputed((v) => !v)}
+            />
             <LayerToggle
               label={`Civil Unrest (City-Level) ${loadingUnrest ? "(loading…)" : ""}`}
               active={showUnrest}
@@ -154,11 +179,31 @@ export default function MapPage() {
               active={showQuakes}
               onToggle={handleToggleQuakes}
             />
-            <LayerToggle label="Submarine Cables" active={showCables} onToggle={() => setShowCables((v) => !v)} />
-            <LayerToggle label="All Countries" active={showAllCountries} onToggle={() => setShowAllCountries((v) => !v)} />
-            <LayerToggle label="Places to Visit" active={showPlaces} onToggle={() => setShowPlaces((v) => !v)} />
-            <LayerToggle label="Architecture & Wonders" active={showArchitecture} onToggle={() => setShowArchitecture((v) => !v)} />
-            <LayerToggle label="Day/Night" active={showDayNight} onToggle={() => setShowDayNight((v) => !v)} />
+            <LayerToggle
+              label="Submarine Cables"
+              active={showCables}
+              onToggle={() => setShowCables((v) => !v)}
+            />
+            <LayerToggle
+              label="All Countries"
+              active={showAllCountries}
+              onToggle={() => setShowAllCountries((v) => !v)}
+            />
+            <LayerToggle
+              label="Places to Visit"
+              active={showPlaces}
+              onToggle={() => setShowPlaces((v) => !v)}
+            />
+            <LayerToggle
+              label="Architecture & Wonders"
+              active={showArchitecture}
+              onToggle={() => setShowArchitecture((v) => !v)}
+            />
+            <LayerToggle
+              label="Day/Night"
+              active={showDayNight}
+              onToggle={() => setShowDayNight((v) => !v)}
+            />
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <CountryDossier country={selected} />
             </div>

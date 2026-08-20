@@ -27,7 +27,7 @@ export const modules: ModuleInfo[] = [
   { id: "M16", name: "Signal & Freedom Indices", status: "online" },
   { id: "M17", name: "Multilingual Core", status: "standby" },
 
-  // ── Future roadmap — see docs/FUTURE-LAYERS-AND-FEATURES.md ──
+  // ── Future roadmap ──
   { id: "M18", name: "Country Boundary Polygons", status: "standby" },
   { id: "M19", name: "Submarine Cable Routes", status: "standby" },
   { id: "M20", name: "Refugee & Displacement Flows", status: "standby" },
@@ -51,4 +51,5 @@ export const modules: ModuleInfo[] = [
   { id: "M38", name: "Global Trade & Supply Chain Flows", status: "standby" },
   { id: "M39", name: "Global Migration & Diaspora Flows", status: "standby" },
   { id: "M40", name: "Military & Nuclear Sites Markers", status: "standby" },
+  { id: "M41", name: "Live Civil Unrest (ACLED + Guardian)", status: "online" },
 ];

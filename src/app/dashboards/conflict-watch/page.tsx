@@ -1,6 +1,6 @@
 import { fetchGuardianNews } from "@/lib/providers/guardian";
 import { fetchAirspaceSnapshot } from "@/lib/providers/opensky";
-import { fetchLiveUnrest } from "@/lib/providers/unrest-live";
+import { fetchLiveUnrestGuardian } from "@/lib/providers/unrest-guardian";
 import { disputedTerritories } from "@/lib/disputed-territories";
 import { ThemeProvider } from "@/components/theme-provider";
 import { StatusBar, CommandPalette, Panel, KpiCard, LedBadge } from "@/components/terminal";
@@ -18,13 +18,16 @@ export default async function ConflictWatchPage() {
   const [news, airspace, unrest] = await Promise.all([
     fetchGuardianNews("conflict OR war OR military OR unrest"),
     fetchAirspaceSnapshot(),
-    fetchLiveUnrest(),
+    fetchLiveUnrestGuardian(),
   ]);
 
-  const tensionCounts = airspace.regionCounts.filter((r) =>
+  const tensionCounts = airspace.regionCounts.filter((r: { regionId: string; count: number }) =>
     TENSION_REGION_IDS.includes(r.regionId),
   );
-  const totalTensionAircraft = tensionCounts.reduce((sum, r) => sum + r.count, 0);
+  const totalTensionAircraft = tensionCounts.reduce(
+    (sum: number, r: { count: number }) => sum + r.count,
+    0,
+  );
 
   return (
     <ThemeProvider>
@@ -57,28 +60,30 @@ export default async function ConflictWatchPage() {
               </p>
             )}
             <div className="flex flex-col gap-3 mt-2">
-              {news.articles.slice(0, 8).map((a) => (
-                <a
-                  key={a.id}
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block border-b border-[var(--border)] pb-3 last:border-0 hover:bg-[var(--bg-2)] transition-colors -mx-2 px-2 rounded-[var(--radius-sm)]"
-                >
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--accent)]">
-                    {a.section}
-                  </span>
-                  <h3 className="font-display text-base font-semibold text-[var(--fg-0)] mt-1">
-                    {a.title}
-                  </h3>
-                </a>
-              ))}
+              {news.articles
+                .slice(0, 8)
+                .map((a: { id: string; url: string; section: string; title: string }) => (
+                  <a
+                    key={a.id}
+                    href={a.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block border-b border-[var(--border)] pb-3 last:border-0 hover:bg-[var(--bg-2)] transition-colors -mx-2 px-2 rounded-[var(--radius-sm)]"
+                  >
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--accent)]">
+                      {a.section}
+                    </span>
+                    <h3 className="font-display text-base font-semibold text-[var(--fg-0)] mt-1">
+                      {a.title}
+                    </h3>
+                  </a>
+                ))}
             </div>
           </Panel>
 
           <Panel title="Airspace Tension Zones" eyebrow="OPENSKY">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {tensionCounts.map((r) => (
+              {tensionCounts.map((r: { regionId: string; count: number }) => (
                 <div
                   key={r.regionId}
                   className="flex justify-between border-b border-[var(--border)] py-2 font-mono text-sm"

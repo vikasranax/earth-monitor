@@ -40,6 +40,9 @@ export const serverEnvSchema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
 
   RESEND_API_KEY: z.string().optional(),
+
+  ACLED_EMAIL: z.string().optional(),
+  ACLED_PASSWORD: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -155,6 +158,13 @@ export function readiness(): Readiness {
       items: [
         { key: "OPENAQ_KEY", armed: Boolean(s.OPENAQ_KEY) },
         { key: "CLOUDFLARE_RADAR_TOKEN", armed: Boolean(s.CLOUDFLARE_RADAR_TOKEN) },
+      ],
+    },
+    {
+      id: "unrest",
+      label: "CIVIL UNREST",
+      items: [
+        { key: "ACLED_EMAIL", armed: Boolean(s.ACLED_EMAIL && s.ACLED_PASSWORD), optional: true },
       ],
     },
   ];

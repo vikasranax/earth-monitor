@@ -5,7 +5,7 @@ import L from "leaflet";
 import { useEffect } from "react";
 import { countries, type Country } from "@/lib/countries";
 import { disputedTerritories } from "@/lib/disputed-territories";
-import type { UnrestMarker } from "@/lib/providers/unrest-live";
+import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 import type { CountryLocation } from "@/lib/providers/country-locations";
 import type { ArchitectureSite } from "@/lib/architecture-wonders";
 import { DayNightLayer } from "@/components/map/DayNightLayer";
@@ -185,9 +185,7 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "200px" }}>
                 <strong>{t.name}</strong>
-                <div
-                  style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}
-                >
+                <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>
                   {t.claims.map((claim, i) => (
                     <div key={i}>
                       <strong>{claim.claimant}:</strong> {claim.status}
@@ -206,36 +204,11 @@ export function WorldMap({
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "220px" }}>
                 <strong style={{ color: "var(--danger)" }}>{m.locationName}</strong>
                 <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>
-                  {m.count} mention{m.count === 1 ? "" : "s"} in the last 24h
+                  {m.count} event{m.count === 1 ? "" : "s"} recorded
                 </div>
-                {m.articles.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: "6px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "4px",
-                    }}
-                  >
-                    {m.articles.map((a, i) => (
-                      <a
-                        key={i}
-                        href={a.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          color: "var(--accent)",
-                          textDecoration: "underline",
-                          fontSize: "11px",
-                        }}
-                      >
-                        {a.title}
-                      </a>
-                    ))}
-                  </div>
-                )}
+                {m.details.length > 0 && (<div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>{m.details.map((d, i) => (d.url ? <a key={i} href={d.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline", fontSize: "11px" }}>{d.label}</a> : <span key={i} style={{ color: "var(--fg-2)", fontSize: "11px" }}>{d.label}</span>))}</div>)}
                 <div style={{ marginTop: "6px", color: "var(--fg-muted)", fontSize: "10px" }}>
-                  Source: GDELT GEO 2.0 · city-level
+                  Source: ACLED / Guardian
                 </div>
               </div>
             </Popup>
@@ -244,20 +217,14 @@ export function WorldMap({
 
       {showQuakes &&
         quakes.map((q) => (
-          <Marker
-            key={q.id}
-            position={[q.lat, q.lng]}
-            icon={q.magnitude >= 6 ? quakeMajorIcon : quakeModerateIcon}
-          >
+          <Marker key={q.id} position={[q.lat, q.lng]} icon={q.magnitude >= 6 ? quakeMajorIcon : quakeModerateIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
                 <strong style={{ color: q.magnitude >= 6 ? "#ff4d4f" : "#f5c542" }}>
                   M{q.magnitude.toFixed(1)} — {q.place}
                 </strong>
                 <div style={{ marginTop: "4px" }}>Depth: {q.depth.toFixed(1)} km</div>
-                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
-                  {new Date(q.time).toLocaleString()}
-                </div>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{new Date(q.time).toLocaleString()}</div>
               </div>
             </Popup>
           </Marker>
@@ -269,9 +236,7 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "160px" }}>
                 <strong>{c.name}</strong>
-                <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>
-                  Cables: {c.cables.join(", ")}
-                </div>
+                <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>Cables: {c.cables.join(", ")}</div>
               </div>
             </Popup>
           </Marker>
@@ -292,12 +257,8 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "160px" }}>
                 <strong style={{ color: "var(--ok)" }}>{p.name}</strong>
-                {p.country && (
-                  <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{p.country}</div>
-                )}
-                {p.description && (
-                  <div style={{ marginTop: "4px", color: "var(--fg-1)" }}>{p.description}</div>
-                )}
+                {p.country && <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{p.country}</div>}
+                {p.description && <div style={{ marginTop: "4px", color: "var(--fg-1)" }}>{p.description}</div>}
               </div>
             </Popup>
           </Marker>
@@ -309,9 +270,7 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
                 <strong style={{ color: "#f5c542" }}>{s.name}</strong>
-                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
-                  {s.location}, {s.country}
-                </div>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{s.location}, {s.country}</div>
               </div>
             </Popup>
           </Marker>

@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
-import { fetchLiveUnrest } from "@/lib/providers/unrest-live";
+import { fetchLiveUnrestAcled } from "@/lib/providers/unrest-acled";
+import { fetchLiveUnrestGuardian } from "@/lib/providers/unrest-guardian";
 
 export async function GET() {
-  const result = await fetchLiveUnrest();
-  return NextResponse.json(result);
+  const acled = await fetchLiveUnrestAcled();
+
+  if (acled.armed && !acled.error && acled.markers.length > 0) {
+    return NextResponse.json(acled);
+  }
+
+  const guardian = await fetchLiveUnrestGuardian();
+  return NextResponse.json({
+    ...guardian,
+    source: guardian.armed ? "guardian" : "none",
+  });
 }
