@@ -237,6 +237,28 @@ export default async function ThematicDeckPage() {
             </Panel>
           </div>
 
+          {/* Visa Matrix Panel */}
+          <Panel title="Visa & Immigration Matrix" eyebrow="TRAVEL" className="lg:col-span-3">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <p className="text-sm text-[var(--fg-2)] font-mono mb-1">
+                  Interactive passport checker and directory of official government portals for 65+
+                  countries.
+                </p>
+                <p className="text-xs text-[var(--fg-muted)] font-mono">
+                  Supports 10 major passport types (US, UK, EU, CA, AU, IN, CN, RU, BR, JP).
+                </p>
+              </div>
+              <Link
+                href="/visas"
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2 border border-[var(--accent)] text-[var(--accent)] font-mono text-xs uppercase tracking-wider rounded-[var(--radius-sm)] hover:bg-[var(--accent)]/10 transition-colors"
+              >
+                Launch Matrix
+                <span>↗</span>
+              </Link>
+            </div>
+          </Panel>
+
           <Panel title="Latest Headlines" eyebrow="NEWS WIRE">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {news.articles.slice(0, 6).map((a) => (

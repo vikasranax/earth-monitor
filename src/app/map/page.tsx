@@ -10,6 +10,7 @@ import { placesToVisit } from "@/lib/places-to-visit";
 import { architectureSites } from "@/lib/architecture-wonders";
 import type { Country } from "@/lib/countries";
 import type { UnrestMarker } from "@/lib/providers/unrest-acled";
+import type { ReactNode } from "react";
 
 const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
   ssr: false,
@@ -37,17 +38,24 @@ function LayerToggle({
   label,
   active,
   onToggle,
+  markerIcon,
 }: {
   label: string;
   active: boolean;
   onToggle: () => void;
+  markerIcon?: ReactNode;
 }) {
   return (
     <button
       onClick={onToggle}
       className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"}`}
     >
-      <span>{label}</span>
+      <div className="flex items-center gap-2">
+        {markerIcon && (
+          <span className="flex items-center justify-center w-4 h-4 shrink-0">{markerIcon}</span>
+        )}
+        <span>{label}</span>
+      </div>
       <span
         className="w-2 h-2 rounded-full"
         style={{ background: active ? "var(--accent)" : "var(--fg-muted)" }}
@@ -165,11 +173,34 @@ export default function MapPage() {
               label="Disputed Territories"
               active={showDisputed}
               onToggle={() => setShowDisputed((v) => !v)}
+              markerIcon={
+                <div
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    background: "var(--warn)",
+                    transform: "rotate(45deg)",
+                    boxShadow: "0 0 4px var(--warn)",
+                  }}
+                />
+              }
             />
             <LayerToggle
-              label={`Civil Unrest (City-Level) ${loadingUnrest ? "(loading…)" : ""}`}
+              label={`Civil Unrest ${loadingUnrest ? "(loading…)" : ""}`}
               active={showUnrest}
               onToggle={handleToggleUnrest}
+              markerIcon={
+                <div
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "var(--danger)",
+                    boxShadow: "0 0 4px var(--danger)",
+                  }}
+                  className="animate-pulse"
+                />
+              }
             />
             {unrestError && (
               <p className="text-[10px] text-[var(--danger)] font-mono px-1">{unrestError}</p>
@@ -178,31 +209,97 @@ export default function MapPage() {
               label={`Earthquakes ${loadingQuakes ? "(loading…)" : ""}`}
               active={showQuakes}
               onToggle={handleToggleQuakes}
+              markerIcon={
+                <div
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "50%",
+                    background: "rgba(245,197,66,1)",
+                    border: "1.5px solid var(--danger)",
+                    boxShadow: "0 0 4px rgba(245,197,66,1)",
+                  }}
+                />
+              }
             />
             <LayerToggle
               label="Submarine Cables"
               active={showCables}
               onToggle={() => setShowCables((v) => !v)}
+              markerIcon={
+                <div
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "#8b7cf6",
+                    boxShadow: "0 0 3px #8b7cf6",
+                  }}
+                />
+              }
             />
             <LayerToggle
               label="All Countries"
               active={showAllCountries}
               onToggle={() => setShowAllCountries((v) => !v)}
+              markerIcon={
+                <div
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "var(--accent)",
+                    boxShadow: "0 0 3px var(--accent)",
+                  }}
+                />
+              }
             />
             <LayerToggle
               label="Places to Visit"
               active={showPlaces}
               onToggle={() => setShowPlaces((v) => !v)}
+              markerIcon={
+                <div
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    background: "var(--ok)",
+                    transform: "rotate(45deg)",
+                    boxShadow: "0 0 4px var(--ok)",
+                  }}
+                />
+              }
             />
             <LayerToggle
               label="Architecture & Wonders"
               active={showArchitecture}
               onToggle={() => setShowArchitecture((v) => !v)}
+              markerIcon={
+                <div
+                  style={{
+                    width: "0",
+                    height: "0",
+                    borderLeft: "4px solid transparent",
+                    borderRight: "4px solid transparent",
+                    borderBottom: "8px solid #f5c542",
+                  }}
+                />
+              }
             />
             <LayerToggle
               label="Day/Night"
               active={showDayNight}
               onToggle={() => setShowDayNight((v) => !v)}
+              markerIcon={
+                <div
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    background: "linear-gradient(45deg, var(--bg-3) 50%, var(--accent) 50%)",
+                    borderRadius: "2px",
+                  }}
+                />
+              }
             />
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <CountryDossier country={selected} />

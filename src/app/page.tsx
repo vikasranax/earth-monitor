@@ -142,7 +142,7 @@ export default async function HomeCommandDeck() {
           <OnThisDay />
           <WorldClock />
 
-          <Panel title="Module Manifest" eyebrow="CAMPAIGN M01–M17">
+          <Panel title="Module Manifest" eyebrow="CAMPAIGN ROADMAP">
             <DataTable<ModuleInfo>
               columns={[
                 { key: "id", header: "ID" },
