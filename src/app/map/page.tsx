@@ -10,81 +10,27 @@ import { placesToVisit } from "@/lib/places-to-visit";
 import { architectureSites } from "@/lib/architecture-wonders";
 import type { Country } from "@/lib/countries";
 import type { UnrestMarker } from "@/lib/providers/unrest-acled";
-import type { ReactNode } from "react";
+import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
 
-const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-[var(--bg-1)]" />,
-});
+const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), { ssr: false, loading: () => <div className="h-full w-full bg-[var(--bg-1)]" /> });
 
-interface QuakeEvent {
-  id: string;
-  place: string;
-  magnitude: number;
-  lat: number;
-  lng: number;
-  depth: number;
-  time: string;
-}
+interface QuakeEvent { id: string; place: string; magnitude: number; lat: number; lng: number; depth: number; time: string; }
+interface CountryLocation { code: string; name: string; lat: number; lng: number; }
 
-interface CountryLocation {
-  code: string;
-  name: string;
-  lat: number;
-  lng: number;
-}
-
-function LayerToggle({
-  label,
-  active,
-  onToggle,
-  markerIcon,
-}: {
-  label: string;
-  active: boolean;
-  onToggle: () => void;
-  markerIcon?: ReactNode;
-}) {
+function LayerToggle({ label, active, onToggle }: { label: string; active: boolean; onToggle: () => void }) {
   return (
-    <button
-      onClick={onToggle}
-      className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"}`}
-    >
-      <div className="flex items-center gap-2">
-        {markerIcon && (
-          <span className="flex items-center justify-center w-4 h-4 shrink-0">{markerIcon}</span>
-        )}
-        <span>{label}</span>
-      </div>
-      <span
-        className="w-2 h-2 rounded-full"
-        style={{ background: active ? "var(--accent)" : "var(--fg-muted)" }}
-      />
+    <button onClick={onToggle} className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"}`}>
+      <span>{label}</span>
+      <span className="w-2 h-2 rounded-full" style={{ background: active ? "var(--accent)" : "var(--fg-muted)" }} />
     </button>
   );
 }
 
-function BaseLayerControl({
-  baseLayer,
-  onChange,
-}: {
-  baseLayer: "dark" | "satellite";
-  onChange: (v: "dark" | "satellite") => void;
-}) {
+function BaseLayerControl({ baseLayer, onChange }: { baseLayer: "dark" | "satellite"; onChange: (v: "dark" | "satellite") => void }) {
   return (
     <div className="flex gap-1 p-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)]">
-      <button
-        onClick={() => onChange("dark")}
-        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "dark" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}
-      >
-        Dark
-      </button>
-      <button
-        onClick={() => onChange("satellite")}
-        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "satellite" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}
-      >
-        Satellite
-      </button>
+      <button onClick={() => onChange("dark")} className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "dark" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}>Dark</button>
+      <button onClick={() => onChange("satellite")} className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "satellite" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}>Satellite</button>
     </div>
   );
 }
@@ -99,20 +45,20 @@ export default function MapPage() {
   const [showAllCountries, setShowAllCountries] = useState(false);
   const [showPlaces, setShowPlaces] = useState(false);
   const [showArchitecture, setShowArchitecture] = useState(false);
+  const [showMilitary, setShowMilitary] = useState(false);
   const [allCountries, setAllCountries] = useState<CountryLocation[]>([]);
   const [quakes, setQuakes] = useState<QuakeEvent[]>([]);
   const [unrestMarkers, setUnrestMarkers] = useState<UnrestMarker[]>([]);
-  const [unrestError, setUnrestError] = useState<string | null>(null);
+  const [militaryAircraft, setMilitaryAircraft] = useState<MilitaryAircraft[]>([]);
+  const [militaryError, setMilitaryError] = useState<string | null>(null);
   const [loadingQuakes, setLoadingQuakes] = useState(false);
   const [loadingUnrest, setLoadingUnrest] = useState(false);
+  const [loadingMilitary, setLoadingMilitary] = useState(false);
   const [showDayNight, setShowDayNight] = useState(false);
 
   useEffect(() => {
     if (showAllCountries && allCountries.length === 0) {
-      fetch("/api/countries/locations")
-        .then((res) => res.json())
-        .then((data) => setAllCountries(data.locations || []))
-        .catch(() => setAllCountries([]));
+      fetch("/api/countries/locations").then((res) => res.json()).then((data) => setAllCountries(data.locations || [])).catch(() => setAllCountries([]));
     }
   }, [showAllCountries, allCountries.length]);
 
@@ -123,14 +69,8 @@ export default function MapPage() {
       setLoadingQuakes(true);
       try {
         const res = await fetch("/api/quakes");
-        if (res.ok) {
-          const data = await res.json();
-          setQuakes(data.events || []);
-        }
-      } catch {
-      } finally {
-        setLoadingQuakes(false);
-      }
+        if (res.ok) { const data = await res.json(); setQuakes(data.events || []); }
+      } catch {} finally { setLoadingQuakes(false); }
     }
   };
 
@@ -139,19 +79,28 @@ export default function MapPage() {
     setShowUnrest(next);
     if (next && unrestMarkers.length === 0) {
       setLoadingUnrest(true);
-      setUnrestError(null);
       try {
         const res = await fetch("/api/unrest/live");
         const data = await res.json();
-        if (data.error) setUnrestError(data.error);
         setUnrestMarkers(data.markers || []);
-        // eslint-disable-next-line no-console
-        console.log("[unrest debug]", data.debug);
+      } catch {} finally { setLoadingUnrest(false); }
+    }
+  };
+
+  const handleToggleMilitary = async () => {
+    const next = !showMilitary;
+    setShowMilitary(next);
+    if (next && militaryAircraft.length === 0) {
+      setLoadingMilitary(true);
+      setMilitaryError(null);
+      try {
+        const res = await fetch("/api/airspace/military");
+        const data = await res.json();
+        if (data.error) setMilitaryError(data.error);
+        setMilitaryAircraft(data.aircraft || []);
       } catch (err) {
-        setUnrestError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setLoadingUnrest(false);
-      }
+        setMilitaryError(err instanceof Error ? err.message : "Failed to load");
+      } finally { setLoadingMilitary(false); }
     }
   };
 
@@ -161,168 +110,29 @@ export default function MapPage() {
         <StatusBar />
         <div className="flex-1 flex flex-col md:flex-row gap-0">
           <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">
-              Base Layer
-            </div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">Base Layer</div>
             <BaseLayerControl baseLayer={baseLayer} onChange={setBaseLayer} />
-
-            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mt-2 mb-1">
-              Map Layers
-            </div>
-            <LayerToggle
-              label="Disputed Territories"
-              active={showDisputed}
-              onToggle={() => setShowDisputed((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    background: "var(--warn)",
-                    transform: "rotate(45deg)",
-                    boxShadow: "0 0 4px var(--warn)",
-                  }}
-                />
-              }
-            />
-            <LayerToggle
-              label={`Civil Unrest ${loadingUnrest ? "(loading…)" : ""}`}
-              active={showUnrest}
-              onToggle={handleToggleUnrest}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "var(--danger)",
-                    boxShadow: "0 0 4px var(--danger)",
-                  }}
-                  className="animate-pulse"
-                />
-              }
-            />
-            {unrestError && (
-              <p className="text-[10px] text-[var(--danger)] font-mono px-1">{unrestError}</p>
-            )}
-            <LayerToggle
-              label={`Earthquakes ${loadingQuakes ? "(loading…)" : ""}`}
-              active={showQuakes}
-              onToggle={handleToggleQuakes}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "rgba(245,197,66,1)",
-                    border: "1.5px solid var(--danger)",
-                    boxShadow: "0 0 4px rgba(245,197,66,1)",
-                  }}
-                />
-              }
-            />
-            <LayerToggle
-              label="Submarine Cables"
-              active={showCables}
-              onToggle={() => setShowCables((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    background: "#8b7cf6",
-                    boxShadow: "0 0 3px #8b7cf6",
-                  }}
-                />
-              }
-            />
-            <LayerToggle
-              label="All Countries"
-              active={showAllCountries}
-              onToggle={() => setShowAllCountries((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    background: "var(--accent)",
-                    boxShadow: "0 0 3px var(--accent)",
-                  }}
-                />
-              }
-            />
-            <LayerToggle
-              label="Places to Visit"
-              active={showPlaces}
-              onToggle={() => setShowPlaces((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    background: "var(--ok)",
-                    transform: "rotate(45deg)",
-                    boxShadow: "0 0 4px var(--ok)",
-                  }}
-                />
-              }
-            />
-            <LayerToggle
-              label="Architecture & Wonders"
-              active={showArchitecture}
-              onToggle={() => setShowArchitecture((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "0",
-                    height: "0",
-                    borderLeft: "4px solid transparent",
-                    borderRight: "4px solid transparent",
-                    borderBottom: "8px solid #f5c542",
-                  }}
-                />
-              }
-            />
-            <LayerToggle
-              label="Day/Night"
-              active={showDayNight}
-              onToggle={() => setShowDayNight((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    background: "linear-gradient(45deg, var(--bg-3) 50%, var(--accent) 50%)",
-                    borderRadius: "2px",
-                  }}
-                />
-              }
-            />
-            <div className="mt-auto pt-4 border-t border-[var(--border)]">
-              <CountryDossier country={selected} />
-            </div>
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mt-2 mb-1">Map Layers</div>
+            <LayerToggle label="Disputed Territories" active={showDisputed} onToggle={() => setShowDisputed((v) => !v)} />
+            <LayerToggle label={`Civil Unrest ${loadingUnrest ? "(loading…)" : ""}`} active={showUnrest} onToggle={handleToggleUnrest} />
+            <LayerToggle label={`Earthquakes ${loadingQuakes ? "(loading…)" : ""}`} active={showQuakes} onToggle={handleToggleQuakes} />
+            <LayerToggle label="Submarine Cables" active={showCables} onToggle={() => setShowCables((v) => !v)} />
+            <LayerToggle label="All Countries" active={showAllCountries} onToggle={() => setShowAllCountries((v) => !v)} />
+            <LayerToggle label="Places to Visit" active={showPlaces} onToggle={() => setShowPlaces((v) => !v)} />
+            <LayerToggle label="Architecture & Wonders" active={showArchitecture} onToggle={() => setShowArchitecture((v) => !v)} />
+            <LayerToggle label={`Military Aircraft ${loadingMilitary ? "(loading…)" : ""}`} active={showMilitary} onToggle={handleToggleMilitary} />
+            {militaryError && <p className="text-[10px] text-[var(--danger)] font-mono px-1">{militaryError}</p>}
+            <LayerToggle label="Day/Night" active={showDayNight} onToggle={() => setShowDayNight((v) => !v)} />
+            <div className="mt-auto pt-4 border-t border-[var(--border)]"><CountryDossier country={selected} /></div>
           </div>
           <div className="flex-1 h-[500px] md:h-auto relative">
             <WorldMap
-              onSelectCountry={setSelected}
-              baseLayer={baseLayer}
-              showDisputed={showDisputed}
-              showUnrest={showUnrest}
-              unrestMarkers={unrestMarkers}
-              showQuakes={showQuakes}
-              quakes={quakes}
-              showCables={showCables}
-              cableLandings={cableLandings}
-              showAllCountries={showAllCountries}
-              allCountries={allCountries}
-              showPlaces={showPlaces}
-              placesToVisit={placesToVisit}
-              showDayNight={showDayNight}
-              showArchitecture={showArchitecture}
-              architectureSites={architectureSites}
+              onSelectCountry={setSelected} baseLayer={baseLayer} showDisputed={showDisputed}
+              showUnrest={showUnrest} unrestMarkers={unrestMarkers} showQuakes={showQuakes} quakes={quakes}
+              showCables={showCables} cableLandings={cableLandings} showAllCountries={showAllCountries}
+              allCountries={allCountries} showPlaces={showPlaces} placesToVisit={placesToVisit}
+              showDayNight={showDayNight} showArchitecture={showArchitecture} architectureSites={architectureSites}
+              showMilitary={showMilitary} militaryAircraft={militaryAircraft}
             />
           </div>
         </div>

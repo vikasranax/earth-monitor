@@ -9,6 +9,7 @@ import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 import type { CountryLocation } from "@/lib/providers/country-locations";
 import type { ArchitectureSite } from "@/lib/architecture-wonders";
 import { DayNightLayer } from "@/components/map/DayNightLayer";
+import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
 
 const countryIcon = L.divIcon({
   className: "",
@@ -33,7 +34,7 @@ const unrestIcon = L.divIcon({
 
 const quakeMajorIcon = L.divIcon({
   className: "",
-  html: `<div style="width:16px;height:16px;border-radius:50%;background:rgba(255,77,79,0.6);box-shadow:0 0 12px rgba(255,77,79,0.8);border:2px solid var(--danger);"></div>`,
+  html: `<div style="width:16px;height:16px;border-radius:50%;background:rgba(245,197,66,0.6);box-shadow:0 0 12px rgba(245,197,66,0.8);border:2px solid var(--danger);"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
@@ -64,6 +65,13 @@ const architectureIcon = L.divIcon({
   html: `<div style="width:12px;height:12px;background:#f5c542;clip-path:polygon(50% 0%, 100% 100%, 0% 100%);box-shadow:0 0 8px #f5c542;"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 10],
+});
+
+const militaryIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:11px;height:11px;background:#3ba7ff;clip-path:polygon(50% 0%, 0% 100%, 100% 100%);box-shadow:0 0 8px #3ba7ff;border:1px solid rgba(255,255,255,0.4);"></div>`,
+  iconSize: [11, 11],
+  iconAnchor: [5.5, 5.5],
 });
 
 interface QuakeEvent {
@@ -112,6 +120,8 @@ interface WorldMapProps {
   showDayNight?: boolean;
   showArchitecture?: boolean;
   architectureSites?: ArchitectureSite[];
+  showMilitary?: boolean;
+  militaryAircraft?: MilitaryAircraft[];
 }
 
 function MapController({ center, zoom }: { center?: [number, number]; zoom?: number }) {
@@ -141,6 +151,8 @@ export function WorldMap({
   showDayNight = false,
   showArchitecture = false,
   architectureSites = [],
+  showMilitary = false,
+  militaryAircraft = [],
 }: WorldMapProps) {
   return (
     <MapContainer
@@ -185,7 +197,9 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "200px" }}>
                 <strong>{t.name}</strong>
-                <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div
+                  style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}
+                >
                   {t.claims.map((claim, i) => (
                     <div key={i}>
                       <strong>{claim.claimant}:</strong> {claim.status}
@@ -206,7 +220,38 @@ export function WorldMap({
                 <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>
                   {m.count} event{m.count === 1 ? "" : "s"} recorded
                 </div>
-                {m.details.length > 0 && (<div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px" }}>{m.details.map((d, i) => (d.url ? <a key={i} href={d.url} target="_blank" rel="noreferrer" style={{ color: "var(--accent)", textDecoration: "underline", fontSize: "11px" }}>{d.label}</a> : <span key={i} style={{ color: "var(--fg-2)", fontSize: "11px" }}>{d.label}</span>))}</div>)}
+                {m.details.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "6px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                    }}
+                  >
+                    {m.details.map((d, i) =>
+                      d.url ? (
+                        <a
+                          key={i}
+                          href={d.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            color: "var(--accent)",
+                            textDecoration: "underline",
+                            fontSize: "11px",
+                          }}
+                        >
+                          {d.label}
+                        </a>
+                      ) : (
+                        <span key={i} style={{ color: "var(--fg-2)", fontSize: "11px" }}>
+                          {d.label}
+                        </span>
+                      ),
+                    )}
+                  </div>
+                )}
                 <div style={{ marginTop: "6px", color: "var(--fg-muted)", fontSize: "10px" }}>
                   Source: ACLED / Guardian
                 </div>
@@ -217,14 +262,20 @@ export function WorldMap({
 
       {showQuakes &&
         quakes.map((q) => (
-          <Marker key={q.id} position={[q.lat, q.lng]} icon={q.magnitude >= 6 ? quakeMajorIcon : quakeModerateIcon}>
+          <Marker
+            key={q.id}
+            position={[q.lat, q.lng]}
+            icon={q.magnitude >= 6 ? quakeMajorIcon : quakeModerateIcon}
+          >
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
                 <strong style={{ color: q.magnitude >= 6 ? "#ff4d4f" : "#f5c542" }}>
                   M{q.magnitude.toFixed(1)} — {q.place}
                 </strong>
                 <div style={{ marginTop: "4px" }}>Depth: {q.depth.toFixed(1)} km</div>
-                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{new Date(q.time).toLocaleString()}</div>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
+                  {new Date(q.time).toLocaleString()}
+                </div>
               </div>
             </Popup>
           </Marker>
@@ -236,7 +287,9 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "160px" }}>
                 <strong>{c.name}</strong>
-                <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>Cables: {c.cables.join(", ")}</div>
+                <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>
+                  Cables: {c.cables.join(", ")}
+                </div>
               </div>
             </Popup>
           </Marker>
@@ -257,8 +310,12 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "160px" }}>
                 <strong style={{ color: "var(--ok)" }}>{p.name}</strong>
-                {p.country && <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{p.country}</div>}
-                {p.description && <div style={{ marginTop: "4px", color: "var(--fg-1)" }}>{p.description}</div>}
+                {p.country && (
+                  <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{p.country}</div>
+                )}
+                {p.description && (
+                  <div style={{ marginTop: "4px", color: "var(--fg-1)" }}>{p.description}</div>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -270,7 +327,31 @@ export function WorldMap({
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
                 <strong style={{ color: "#f5c542" }}>{s.name}</strong>
-                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{s.location}, {s.country}</div>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
+                  {s.location}, {s.country}
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      {showMilitary &&
+        militaryAircraft.map((a) => (
+          <Marker key={a.id} position={[a.lat, a.lng]} icon={militaryIcon}>
+            <Popup>
+              <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
+                <strong style={{ color: "#3ba7ff" }}>{a.callsign}</strong>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
+                  {a.aircraftType} · {a.registration}
+                </div>
+                {a.altitude !== null && (
+                  <div style={{ marginTop: "2px", color: "var(--fg-1)" }}>
+                    Alt: {a.altitude.toLocaleString()} ft
+                    {a.speed !== null ? " · " + a.speed + " kn" : ""}
+                  </div>
+                )}
+                <div style={{ marginTop: "6px", color: "var(--fg-muted)", fontSize: "10px" }}>
+                  Source: airplanes.live · unfiltered
+                </div>
               </div>
             </Popup>
           </Marker>
