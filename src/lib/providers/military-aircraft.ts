@@ -19,12 +19,8 @@ export interface MilitaryAirspaceResult {
   error?: string;
 }
 
-const PROVIDER_ID = "airplanes-live-mil";
-// airplanes.live's military endpoint — free, no key, unfiltered (unlike
-// OpenSky, which filters/anonymizes some military traffic). Uses the
-// standard tar1090-family JSON shape shared across most ADS-B community
-// trackers (hex/flight/r/t/lat/lon/alt_baro/gs field names).
-const ENDPOINT = "https://api.airplanes.live/v2/mil";
+const PROVIDER_ID = "adsb-lol-mil";
+const ENDPOINT = "https://api.adsb.lol/v2/mil";
 
 interface RawAircraft {
   hex?: string;
@@ -48,54 +44,37 @@ export async function fetchMilitaryAircraft(): Promise<MilitaryAirspaceResult> {
       aircraft: [],
       cached: false,
       fetchedAt: new Date().toISOString(),
-      error: "Rate limit reached — try again shortly.",
+      error: "Rate limit reached",
     };
   }
 
   try {
     const { data, cached } = await fetchWithCache(
-      "airspace:military:v1",
+      "airspace:military:adsb:v1",
       async () => {
         const res = await fetch(ENDPOINT, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-            Accept: "application/json",
-          },
+          headers: { "User-Agent": "EarthMonitor/1.0" },
         });
-        if (!res.ok) throw new Error("airplanes.live responded " + res.status);
+        if (!res.ok) throw new Error("adsb.lol " + res.status);
 
-        const rawText = await res.text();
-        let json: RawResponse;
-        try {
-          json = JSON.parse(rawText) as RawResponse;
-        } catch {
-          throw new Error("airplanes.live returned a non-JSON response: " + rawText.slice(0, 150));
-        }
-
+        const json = (await res.json()) as RawResponse;
         const list = json.ac ?? [];
-        const parsed: MilitaryAircraft[] = [];
 
-        for (const a of list) {
-          if (!a.hex || typeof a.lat !== "number" || typeof a.lon !== "number") continue;
-          const altRaw = a.alt_baro;
-          const altitude = typeof altRaw === "number" ? altRaw : altRaw === "ground" ? 0 : null;
-
-          parsed.push({
-            id: a.hex,
+        return list
+          .filter((a) => typeof a.lat === "number" && typeof a.lon === "number" && a.hex)
+          .map((a) => ({
+            id: a.hex!,
             callsign: (a.flight ?? "").trim() || "Unknown",
             registration: a.r ?? "—",
             aircraftType: a.t ?? "Unknown",
-            lat: a.lat,
-            lng: a.lon,
-            altitude,
+            lat: a.lat!,
+            lng: a.lon!,
+            altitude:
+              typeof a.alt_baro === "number" ? a.alt_baro : a.alt_baro === "ground" ? 0 : null,
             speed: typeof a.gs === "number" ? a.gs : null,
-          });
-        }
-
-        return parsed;
+          }));
       },
-      { ttlSeconds: 120 },
+      { ttlSeconds: 60 },
     );
 
     return { aircraft: data, cached, fetchedAt: new Date().toISOString() };
@@ -104,7 +83,7 @@ export async function fetchMilitaryAircraft(): Promise<MilitaryAirspaceResult> {
       aircraft: [],
       cached: false,
       fetchedAt: new Date().toISOString(),
-      error: err instanceof Error ? err.message : "Unknown error fetching military aircraft data",
+      error: err instanceof Error ? err.message : "Unknown error",
     };
   }
 }

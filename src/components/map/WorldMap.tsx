@@ -8,6 +8,7 @@ import { disputedTerritories } from "@/lib/disputed-territories";
 import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 import type { CountryLocation } from "@/lib/providers/country-locations";
 import type { ArchitectureSite } from "@/lib/architecture-wonders";
+import type { WebcamMarker } from "@/lib/providers/webcams";
 import { DayNightLayer } from "@/components/map/DayNightLayer";
 import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
 
@@ -67,13 +68,26 @@ const architectureIcon = L.divIcon({
   iconAnchor: [6, 10],
 });
 
+const webcamIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:12px;height:12px;background:#00ffcc;border-radius:2px;box-shadow:0 0 8px #00ffcc;border:1px solid rgba(255,255,255,0.5);"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
+const wildfireIcon = L.divIcon({
+  className: "",
+  html: `<div style="width:12px;height:12px;border-radius:50%;background:#ff6600;box-shadow:0 0 10px #ff6600, 0 0 4px #ff0000;border:1px solid rgba(255,255,255,0.4);" class="animate-pulse"></div>`,
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
+});
+
 const militaryIcon = L.divIcon({
   className: "",
   html: `<div style="width:11px;height:11px;background:#3ba7ff;clip-path:polygon(50% 0%, 0% 100%, 100% 100%);box-shadow:0 0 8px #3ba7ff;border:1px solid rgba(255,255,255,0.4);"></div>`,
   iconSize: [11, 11],
   iconAnchor: [5.5, 5.5],
 });
-
 interface QuakeEvent {
   id: string;
   place: string;
@@ -101,6 +115,16 @@ interface PlaceToVisit {
   description?: string;
 }
 
+interface WildfireMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  brightness: number;
+  confidence: string;
+  satellite: string;
+  acquiredDate: string;
+}
+
 interface WorldMapProps {
   onSelectCountry: (country: Country) => void;
   baseLayer?: "dark" | "satellite";
@@ -120,6 +144,10 @@ interface WorldMapProps {
   showDayNight?: boolean;
   showArchitecture?: boolean;
   architectureSites?: ArchitectureSite[];
+  showWebcams?: boolean;
+  webcams?: WebcamMarker[];
+  showWildfires?: boolean;
+  wildfires?: WildfireMarker[];
   showMilitary?: boolean;
   militaryAircraft?: MilitaryAircraft[];
 }
@@ -151,6 +179,10 @@ export function WorldMap({
   showDayNight = false,
   showArchitecture = false,
   architectureSites = [],
+  showWebcams = false,
+  webcams = [],
+  showWildfires = false,
+  wildfires = [],
   showMilitary = false,
   militaryAircraft = [],
 }: WorldMapProps) {
@@ -229,32 +261,23 @@ export function WorldMap({
                       gap: "4px",
                     }}
                   >
-                    {m.details.map((d, i) =>
-                      d.url ? (
-                        <a
-                          key={i}
-                          href={d.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            color: "var(--accent)",
-                            textDecoration: "underline",
-                            fontSize: "11px",
-                          }}
-                        >
-                          {d.label}
-                        </a>
-                      ) : (
-                        <span key={i} style={{ color: "var(--fg-2)", fontSize: "11px" }}>
-                          {d.label}
-                        </span>
-                      ),
-                    )}
+                    {m.details.map((d, i) => (
+                      <a
+                        key={i}
+                        href={d.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          color: "var(--accent)",
+                          textDecoration: "underline",
+                          fontSize: "11px",
+                        }}
+                      >
+                        {d.label}
+                      </a>
+                    ))}
                   </div>
                 )}
-                <div style={{ marginTop: "6px", color: "var(--fg-muted)", fontSize: "10px" }}>
-                  Source: ACLED / Guardian
-                </div>
               </div>
             </Popup>
           </Marker>
@@ -334,8 +357,57 @@ export function WorldMap({
             </Popup>
           </Marker>
         ))}
+
+      {showWebcams &&
+        webcams.map((w) => (
+          <Marker key={w.id} position={[w.lat, w.lng]} icon={webcamIcon}>
+            <Popup minWidth={340} maxWidth={340}>
+              <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "320px" }}>
+                <strong style={{ color: "#00ffcc" }}>{w.title}</strong>
+                <div
+                  style={{
+                    marginTop: "8px",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <iframe
+                    src={w.playerUrl}
+                    width="100%"
+                    height="180"
+                    frameBorder="0"
+                    allowFullScreen
+                    style={{ display: "block" }}
+                    title={w.title}
+                  ></iframe>
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+      {showWildfires &&
+        wildfires.map((w: WildfireMarker) => (
+          <Marker key={w.id} position={[w.lat, w.lng]} icon={wildfireIcon}>
+            <Popup>
+              <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
+                <strong style={{ color: "#ff6600" }}>Active Fire</strong>
+                <div style={{ marginTop: "4px" }}>Brightness: {w.brightness}K</div>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
+                  Satellite: {w.satellite}
+                </div>
+                <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{w.acquiredDate}</div>
+                <div style={{ marginTop: "4px", color: "var(--fg-muted)", fontSize: "10px" }}>
+                  Source: NASA FIRMS
+                </div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
       {showMilitary &&
-        militaryAircraft.map((a) => (
+        militaryAircraft.map((a: MilitaryAircraft) => (
           <Marker key={a.id} position={[a.lat, a.lng]} icon={militaryIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
@@ -350,7 +422,7 @@ export function WorldMap({
                   </div>
                 )}
                 <div style={{ marginTop: "6px", color: "var(--fg-muted)", fontSize: "10px" }}>
-                  Source: airplanes.live · unfiltered
+                  Source: adsb.lol · unfiltered
                 </div>
               </div>
             </Popup>

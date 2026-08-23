@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { fetchMilitaryAircraft } from "@/lib/providers/military-aircraft";
+import { fetchLiveWebcams } from "@/lib/providers/webcams";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const data = await fetchMilitaryAircraft();
+  const data = await fetchLiveWebcams();
   return NextResponse.json(data);
 }

@@ -31,7 +31,7 @@ export const modules: ModuleInfo[] = [
   { id: "M18", name: "Country Boundary Polygons", status: "standby" },
   { id: "M19", name: "Submarine Cable Routes", status: "standby" },
   { id: "M20", name: "Refugee & Displacement Flows", status: "standby" },
-  { id: "M21", name: "Wildfire Hotspots", status: "standby" },
+  { id: "M21", name: "Wildfire Hotspots", status: "online" },
   { id: "M22", name: "Volcanic Activity", status: "standby" },
   { id: "M23", name: "Solar & Space Weather Overlay", status: "standby" },
   { id: "M24", name: "Full Country Dossier Expansion", status: "standby" },
@@ -43,7 +43,7 @@ export const modules: ModuleInfo[] = [
   { id: "M30", name: "Saved Views & Custom Dashboards", status: "standby" },
   { id: "M31", name: "Watchlist Push Notifications", status: "standby" },
   { id: "M32", name: "Day/Night Terminator", status: "online" },
-  { id: "M33", name: "Live Webcams", status: "standby" },
+  { id: "M33", name: "Live Webcams", status: "online" },
   { id: "M34", name: "Architectures - ASI, UNESCO, Etc.", status: "online" },
   { id: "M35", name: "Critical Minerals & Energy Infrastructure", status: "standby" },
   { id: "M36", name: "Sanctions Layer", status: "standby" },
@@ -52,4 +52,5 @@ export const modules: ModuleInfo[] = [
   { id: "M39", name: "Global Migration & Diaspora Flows", status: "standby" },
   { id: "M40", name: "Military & Nuclear Sites Markers", status: "standby" },
   { id: "M41", name: "Live Civil Unrest (ACLED + Guardian)", status: "online" },
+  { id: "M42", name: "Military Aircraft Live Tracker", status: "online" },
 ];

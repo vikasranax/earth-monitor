@@ -7,6 +7,10 @@ vi.mock("@/lib/fetch-with-cache", () => ({
   }),
 }));
 
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: async () => ({ success: true }),
+}));
+
 import { fetchMilitaryAircraft } from "@/lib/providers/military-aircraft";
 
 describe("fetchMilitaryAircraft", () => {
@@ -20,7 +24,20 @@ describe("fetchMilitaryAircraft", () => {
   it("parses valid aircraft entries", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      text: async () => JSON.stringify({ ac: [{ hex: "abc123", flight: "RCH123", r: "12-3456", t: "C17", lat: 28.6, lon: 77.2, alt_baro: 35000, gs: 450 }] }),
+      json: async () => ({
+        ac: [
+          {
+            hex: "abc123",
+            flight: "RCH123",
+            r: "12-3456",
+            t: "C17",
+            lat: 28.6,
+            lon: 77.2,
+            alt_baro: 35000,
+            gs: 450,
+          },
+        ],
+      }),
     }) as unknown as typeof fetch;
 
     const result = await fetchMilitaryAircraft();
@@ -32,16 +49,20 @@ describe("fetchMilitaryAircraft", () => {
   it("skips entries missing coordinates", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      text: async () => JSON.stringify({ ac: [{ hex: "abc123", flight: "TEST" }] }),
+      json: async () => ({ ac: [{ hex: "abc123", flight: "TEST" }] }),
     }) as unknown as typeof fetch;
 
     const result = await fetchMilitaryAircraft();
     expect(result.aircraft).toHaveLength(0);
   });
 
-  it("returns a clear error on non-JSON response", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, text: async () => "<html>not json</html>" }) as unknown as typeof fetch;
+  it("returns error on API failure", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+    }) as unknown as typeof fetch;
+
     const result = await fetchMilitaryAircraft();
-    expect(result.error).toContain("non-JSON");
+    expect(result.error).toContain("403");
   });
 });

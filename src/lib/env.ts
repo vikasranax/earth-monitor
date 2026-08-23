@@ -43,6 +43,8 @@ export const serverEnvSchema = z.object({
 
   ACLED_EMAIL: z.string().optional(),
   ACLED_PASSWORD: z.string().optional(),
+
+  WINDY_WEBCAMS_API_KEY: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
