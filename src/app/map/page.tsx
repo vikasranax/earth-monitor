@@ -13,6 +13,8 @@ import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 import type { WebcamMarker } from "@/lib/providers/webcams";
 import type { WildfireMarker } from "@/lib/providers/wildfires";
 import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
+import type { GeocodeResult } from "@/lib/providers/nominatim";
+import type { CountryDossier as RestCountryDossier } from "@/lib/providers/rest-countries";
 import type { ReactNode } from "react";
 
 const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
@@ -50,7 +52,11 @@ function LayerToggle({
   return (
     <button
       onClick={onToggle}
-      className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${active ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]" : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"}`}
+      className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${
+        active
+          ? "border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--accent)]"
+          : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--bg-2)]"
+      }`}
     >
       <div className="flex items-center gap-2">
         {markerIcon && (
@@ -77,13 +83,21 @@ function BaseLayerControl({
     <div className="flex gap-1 p-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)]">
       <button
         onClick={() => onChange("dark")}
-        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "dark" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}
+        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${
+          baseLayer === "dark"
+            ? "bg-[var(--accent)] text-white"
+            : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"
+        }`}
       >
         Dark
       </button>
       <button
         onClick={() => onChange("satellite")}
-        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${baseLayer === "satellite" ? "bg-[var(--accent)] text-white" : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"}`}
+        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${
+          baseLayer === "satellite"
+            ? "bg-[var(--accent)] text-white"
+            : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"
+        }`}
       >
         Satellite
       </button>
@@ -119,6 +133,14 @@ export default function MapPage() {
   const [militaryError, setMilitaryError] = useState<string | null>(null);
   const [loadingMilitary, setLoadingMilitary] = useState(false);
 
+  const [geocodeQuery, setGeocodeQuery] = useState("");
+  const [geocodeResults, setGeocodeResults] = useState<GeocodeResult[]>([]);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
+  const [geocodeError, setGeocodeError] = useState<string | null>(null);
+  const [restDossier, setRestDossier] = useState<RestCountryDossier | null>(null);
+  const [restDossierLoading, setRestDossierLoading] = useState(false);
+  const [restDossierError, setRestDossierError] = useState<string | null>(null);
+
   useEffect(() => {
     if (showAllCountries && allCountries.length === 0) {
       fetch("/api/countries/locations")
@@ -127,6 +149,67 @@ export default function MapPage() {
         .catch(() => setAllCountries([]));
     }
   }, [showAllCountries, allCountries.length]);
+
+  const handleGeocodeSearch = async () => {
+    const query = geocodeQuery.trim();
+    if (!query) return;
+    setGeocodeLoading(true);
+    setGeocodeResults([]);
+    setGeocodeError(null);
+    setRestDossier(null);
+    setRestDossierError(null);
+    try {
+      const res = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.error) {
+        setGeocodeError(data.error);
+      } else if (Array.isArray(data.results)) {
+        setGeocodeResults(data.results);
+        if (data.results.length === 1) {
+          handleSelectGeocodeResult(data.results[0]);
+        }
+      } else {
+        setGeocodeError("Invalid response from geocode API");
+      }
+    } catch (err) {
+      setGeocodeError(err instanceof Error ? err.message : "Search failed");
+    } finally {
+      setGeocodeLoading(false);
+    }
+  };
+
+  const handleSelectGeocodeResult = async (result: GeocodeResult) => {
+    setGeocodeResults([]);
+    setGeocodeQuery(result.display_name);
+    setRestDossier(null);
+    setRestDossierError(null);
+
+    const code = result.address?.country_code;
+    if (!code) {
+      setRestDossierError("No country code found in geocode result");
+      return;
+    }
+
+    setRestDossierLoading(true);
+    try {
+      const res = await fetch(`/api/countries/dossier?code=${code.toUpperCase()}`);
+      const data = await res.json();
+      if (data.error) {
+        setRestDossierError(data.error);
+        setRestDossier(null);
+      } else if (data.country) {
+        setRestDossier(data.country);
+      } else {
+        setRestDossierError("Empty dossier response");
+        setRestDossier(null);
+      }
+    } catch (err) {
+      setRestDossierError(err instanceof Error ? err.message : "Dossier fetch failed");
+      setRestDossier(null);
+    } finally {
+      setRestDossierLoading(false);
+    }
+  };
 
   const handleToggleQuakes = async () => {
     const next = !showQuakes;
@@ -140,6 +223,7 @@ export default function MapPage() {
           setQuakes(data.events || []);
         }
       } catch {
+        /* ignore */
       } finally {
         setLoadingQuakes(false);
       }
@@ -156,6 +240,7 @@ export default function MapPage() {
         const data = await res.json();
         setUnrestMarkers(data.markers || []);
       } catch {
+        /* ignore */
       } finally {
         setLoadingUnrest(false);
       }
@@ -191,6 +276,7 @@ export default function MapPage() {
         const data = await res.json();
         setWildfires(data.markers || []);
       } catch {
+        /* ignore */
       } finally {
         setLoadingWildfires(false);
       }
@@ -221,7 +307,7 @@ export default function MapPage() {
       <div className="min-h-screen flex flex-col bg-[var(--bg-0)]">
         <StatusBar />
         <div className="flex-1 flex flex-col md:flex-row gap-0">
-          <div className="w-full md:w-64 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3">
+          <div className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3 overflow-y-auto max-h-screen">
             <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">
               Base Layer
             </div>
@@ -359,6 +445,9 @@ export default function MapPage() {
                 />
               }
             />
+            {webcamError && (
+              <p className="text-[10px] text-[var(--danger)] font-mono px-1">{webcamError}</p>
+            )}
             <LayerToggle
               label={`Military Aircraft ${loadingMilitary ? "(loading…)" : ""}`}
               active={showMilitary}
@@ -395,9 +484,6 @@ export default function MapPage() {
                 />
               }
             />
-            {webcamError && (
-              <p className="text-[10px] text-[var(--danger)] font-mono px-1">{webcamError}</p>
-            )}
             <LayerToggle
               label="Day/Night"
               active={showDayNight}
@@ -413,10 +499,155 @@ export default function MapPage() {
                 />
               }
             />
+
+            <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mt-2 mb-1">
+              Geocode Search
+            </div>
+            <div className="flex gap-1">
+              <input
+                type="text"
+                value={geocodeQuery}
+                onChange={(e) => setGeocodeQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleGeocodeSearch()}
+                placeholder="Search place or country…"
+                className="flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)] text-xs text-[var(--fg-0)] font-mono placeholder:text-[var(--fg-muted)] focus:outline-none focus:border-[var(--accent)]"
+              />
+              <button
+                onClick={handleGeocodeSearch}
+                disabled={geocodeLoading}
+                className="px-2 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)] text-[var(--fg-2)] font-mono text-xs hover:bg-[var(--bg-3)] disabled:opacity-50"
+              >
+                {geocodeLoading ? "…" : "Go"}
+              </button>
+            </div>
+
+            {geocodeError && (
+              <p className="text-[10px] text-[var(--danger)] font-mono px-1 py-1 bg-[var(--danger)]/10 rounded">
+                {geocodeError}
+              </p>
+            )}
+
+            {geocodeResults.length > 0 && (
+              <div className="flex flex-col gap-1 max-h-40 overflow-y-auto border-2 border-[var(--accent)] rounded-[var(--radius-sm)] p-1 bg-[var(--bg-2)]">
+                <div className="text-[10px] text-[var(--fg-muted)] font-mono px-1">
+                  {geocodeResults.length} result{geocodeResults.length !== 1 ? "s" : ""} — click to
+                  select
+                </div>
+                {geocodeResults.map((r) => (
+                  <button
+                    key={r.place_id}
+                    onClick={() => handleSelectGeocodeResult(r)}
+                    className="text-left px-2 py-1.5 rounded-[var(--radius-sm)] text-[10px] text-[var(--fg-1)] font-mono bg-[var(--bg-3)] hover:bg-[var(--accent)]/20 hover:text-[var(--accent)] transition-colors border border-transparent hover:border-[var(--accent)]"
+                  >
+                    {r.display_name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {restDossierLoading && (
+              <div className="px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--accent)]/10">
+                <p className="text-[10px] text-[var(--accent)] font-mono animate-pulse">
+                  Loading dossier…
+                </p>
+              </div>
+            )}
+
+            {restDossierError && !restDossierLoading && (
+              <div className="px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--danger)] bg-[var(--danger)]/10">
+                <p className="text-[10px] text-[var(--danger)] font-mono">{restDossierError}</p>
+              </div>
+            )}
+
+            {restDossier && !restDossierLoading && (
+              <div className="p-3 rounded-[var(--radius-sm)] border-2 border-[var(--accent)] bg-[var(--bg-2)]">
+                <div className="flex items-center gap-2 mb-2">
+                  {restDossier.flags?.png ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={restDossier.flags.png}
+                        alt={restDossier.name?.common || ""}
+                        className="w-8 h-5 object-cover rounded-sm border border-[var(--border)]"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <div className="w-8 h-5 rounded-sm bg-[var(--bg-3)] border border-[var(--border)]" />
+                  )}
+                  <span className="text-sm font-semibold text-[var(--fg-0)]">
+                    {restDossier.name?.common || "Unknown"}
+                  </span>
+                  <span className="text-[10px] text-[var(--fg-muted)] font-mono">
+                    {restDossier.cca2}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] font-mono text-[var(--fg-1)]">
+                  {Array.isArray(restDossier.capital) && restDossier.capital.length > 0 && (
+                    <div>
+                      <span className="text-[var(--fg-muted)]">Capital:</span>{" "}
+                      {restDossier.capital[0]}
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[var(--fg-muted)]">Region:</span>{" "}
+                    {restDossier.region || "Unknown"}
+                  </div>
+                  <div>
+                    <span className="text-[var(--fg-muted)]">Population:</span>{" "}
+                    {typeof restDossier.population === "number"
+                      ? restDossier.population.toLocaleString()
+                      : "—"}
+                  </div>
+                  {typeof restDossier.area === "number" && (
+                    <div>
+                      <span className="text-[var(--fg-muted)]">Area:</span>{" "}
+                      {restDossier.area.toLocaleString()} km²
+                    </div>
+                  )}
+                  {restDossier.currencies &&
+                    typeof restDossier.currencies === "object" &&
+                    Object.keys(restDossier.currencies).length > 0 && (
+                      <div className="col-span-2">
+                        <span className="text-[var(--fg-muted)]">Currency:</span>{" "}
+                        {Object.entries(restDossier.currencies)
+                          .map(([code, cur]) => `${cur.name} (${code})`)
+                          .join(", ")}
+                      </div>
+                    )}
+                  {restDossier.languages &&
+                    typeof restDossier.languages === "object" &&
+                    Object.keys(restDossier.languages).length > 0 && (
+                      <div className="col-span-2">
+                        <span className="text-[var(--fg-muted)]">Languages:</span>{" "}
+                        {Object.values(restDossier.languages).join(", ")}
+                      </div>
+                    )}
+                  {Array.isArray(restDossier.borders) && restDossier.borders.length > 0 && (
+                    <div className="col-span-2">
+                      <span className="text-[var(--fg-muted)]">Borders:</span>{" "}
+                      {restDossier.borders.join(", ")}
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[var(--fg-muted)]">UN Member:</span>{" "}
+                    {restDossier.unMember ? "Yes" : "No"}
+                  </div>
+                  <div>
+                    <span className="text-[var(--fg-muted)]">Landlocked:</span>{" "}
+                    {restDossier.landlocked ? "Yes" : "No"}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-auto pt-4 border-t border-[var(--border)]">
               <CountryDossier country={selected} />
             </div>
           </div>
+
           <div className="flex-1 h-[500px] md:h-auto relative">
             <WorldMap
               onSelectCountry={setSelected}

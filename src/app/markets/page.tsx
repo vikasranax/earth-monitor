@@ -1,5 +1,7 @@
 import { fetchMarketQuotes, fetchForexRates, convertPrice } from "@/lib/providers/yahoo-finance";
 import { fetchMarketQuotes as fetchTwelveDataQuotes } from "@/lib/providers/twelvedata";
+import { fetchCryptoSnapshot } from "@/lib/providers/coingecko";
+import { fetchFxSnapshot } from "@/lib/providers/frankfurter";
 import { regions, asiaRegions, supportedCurrencies } from "@/lib/markets-watchlist";
 import type { MarketQuote } from "@/lib/providers/yahoo-finance";
 import CurrencySelector from "@/components/currency-selector";
@@ -49,6 +51,9 @@ export default async function MarketsPage({ searchParams }: PageProps) {
       currency: targetCurrency,
     }));
   }
+
+  const crypto = await fetchCryptoSnapshot();
+  const fx = await fetchFxSnapshot(displayCurrency);
 
   const byRegion: Record<string, MarketQuote[]> = {};
   for (const q of quotes) {
@@ -133,6 +138,77 @@ export default async function MarketsPage({ searchParams }: PageProps) {
                 </Panel>
               );
             })}
+
+          <Panel
+            title="Crypto Markets"
+            eyebrow="COINGECKO"
+            actions={
+              <LedBadge
+                status={crypto.error ? "warn" : crypto.count > 0 ? "ok" : "idle"}
+                label={crypto.error ? "ERROR" : crypto.cached ? "CACHED" : "LIVE"}
+                pulse={crypto.count > 0 && !crypto.error}
+              />
+            }
+          >
+            {crypto.error && (
+              <p className="text-sm text-[var(--danger)] font-mono mb-2">{crypto.error}</p>
+            )}
+            {crypto.count > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {crypto.coins.map((c) => (
+                  <KpiCard
+                    key={c.id}
+                    label={c.name}
+                    value={c.current_price != null
+                      ? c.current_price.toLocaleString(undefined, {
+                          style: "currency",
+                          currency: "USD",
+                          minimumFractionDigits: c.current_price < 1 ? 4 : 2,
+                          maximumFractionDigits: c.current_price < 1 ? 4 : 2,
+                        })
+                      : "—"}
+                    delta={c.price_change_percentage_24h ?? undefined}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--fg-2)] font-mono text-center py-4">
+                No crypto data available.
+              </p>
+            )}
+          </Panel>
+
+          <Panel
+            title="Foreign Exchange"
+            eyebrow="FRANKFURTER"
+            actions={
+              <LedBadge
+                status={fx.error ? "warn" : Object.keys(fx.rates.rates).length > 0 ? "ok" : "idle"}
+                label={fx.error ? "ERROR" : fx.cached ? "CACHED" : "LIVE"}
+                pulse={Object.keys(fx.rates.rates).length > 0 && !fx.error}
+              />
+            }
+          >
+            {fx.error && (
+              <p className="text-sm text-[var(--danger)] font-mono mb-2">{fx.error}</p>
+            )}
+            {Object.keys(fx.rates.rates).length > 0 ? (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {Object.entries(fx.rates.rates).map(([code, rate]) => (
+                  <KpiCard
+                    key={code}
+                    label={`${fx.rates.base}/${code}`}
+                    value={rate.toFixed(4)}
+                    delta={undefined}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--fg-2)] font-mono text-center py-4">
+                No FX data available.
+              </p>
+            )}
+          </Panel>
 
           {quotes.length === 0 && !error && (
             <Panel title="No Data" eyebrow="MARKETS">

@@ -28,6 +28,7 @@ export const serverEnvSchema = z.object({
   TWELVEDATA_API_KEY: z.string().optional(),
   FRED_API_KEY: z.string().optional(),
   EIA_API_KEY: z.string().optional(),
+  NASA_API_KEY: z.string().optional(),
 
   OPENSKY_USER: z.string().optional(),
   OPENSKY_PASS: z.string().optional(),
@@ -45,6 +46,8 @@ export const serverEnvSchema = z.object({
   ACLED_PASSWORD: z.string().optional(),
 
   WINDY_WEBCAMS_API_KEY: z.string().optional(),
+
+  LOCATIONIQ_API_KEY: z.string().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
@@ -126,6 +129,7 @@ export function readiness(): Readiness {
         { key: "TWELVEDATA_API_KEY", armed: Boolean(s.TWELVEDATA_API_KEY) },
         { key: "FRED_API_KEY", armed: Boolean(s.FRED_API_KEY) },
         { key: "EIA_API_KEY", armed: Boolean(s.EIA_API_KEY) },
+        { key: "NASA_API_KEY", armed: Boolean(s.NASA_API_KEY) },
       ],
     },
     {
