@@ -52,10 +52,12 @@ export default async function HomeCommandDeck() {
     { href: "/space", label: "Space Tracker", icon: "☄", desc: "· Launch library" },
     {
       href: "/signal-freedom",
-      label: "Signal & Freedom Indices",
+      label: "Signal & Freedom",
       icon: "▤",
-      desc: "· Press freedom data",
+      desc: "· Press & digital freedom",
     },
+    { href: "/sanctions", label: "Sanctions", icon: "⚠", desc: "· Watchlists & PEPs" },
+    { href: "/governance", label: "Governance", icon: "⚖", desc: "· Instability index" },
     { href: "/watchlist", label: "Watchlist", icon: "★", desc: "· Alerts & saves" },
     { href: "/elections", label: "Elections", icon: "🗳", desc: "· Calendar & results" },
   ];
@@ -72,7 +74,7 @@ export default async function HomeCommandDeck() {
             <KpiCard label="Cache" value={redisArmed ? "REDIS" : "IN-MEMORY"} />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -166,7 +168,7 @@ export default async function HomeCommandDeck() {
           </Panel>
         </main>
 
-        {/* ── Brand Footer ─────────────────────────────── */}
+        {/* ── Brand Footer ────────────────────────────── */}
         <footer className="border-t border-[var(--border)] py-6 text-center">
           <p className="font-mono text-[11px] tracking-[0.12em] text-[var(--fg-2)] leading-relaxed">
             जगत्-मन्थन · EARTH MONITOR · 地球监测 · مراقبة الأرض · 지구 모니터링
