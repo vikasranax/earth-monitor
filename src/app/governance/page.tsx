@@ -5,7 +5,8 @@ import { StatusBar, CommandPalette, Panel, DataTable, LedBadge } from "@/compone
 import { ThemeProvider } from "@/components/theme-provider";
 import type { CountryGovernanceProfile } from "@/lib/providers/world-bank";
 
-type IndicatorKey = "politicalStability" | "controlOfCorruption" | "ruleOfLaw" | "voiceAndAccountability";
+type IndicatorKey =
+  "politicalStability" | "controlOfCorruption" | "ruleOfLaw" | "voiceAndAccountability";
 
 export default function GovernancePage() {
   const [countryCode, setCountryCode] = useState("");
@@ -26,8 +27,8 @@ export default function GovernancePage() {
         setProfile(null);
       } else {
         setProfile(data);
-        setRecentCountries(prev => {
-          const filtered = prev.filter(p => p.countryCode !== data.countryCode);
+        setRecentCountries((prev) => {
+          const filtered = prev.filter((p) => p.countryCode !== data.countryCode);
           return [data, ...filtered].slice(0, 5);
         });
       }
@@ -62,7 +63,8 @@ export default function GovernancePage() {
               Governance & Instability Index
             </h1>
             <p className="text-sm text-[var(--fg-2)] font-mono">
-              World Bank governance indicators for composite country instability assessment (M37)
+              World Bank governance indicators — raw political stability, corruption, rule of law,
+              and accountability data (M43). Feeds the future composite instability index (M37).
             </p>
           </div>
 
@@ -99,7 +101,9 @@ export default function GovernancePage() {
                     <h2 className="text-lg font-bold text-[var(--fg-0)] font-['Space_Grotesk']">
                       {profile.countryName}
                     </h2>
-                    <p className="text-xs text-[var(--fg-muted)] font-mono">{profile.countryCode}</p>
+                    <p className="text-xs text-[var(--fg-muted)] font-mono">
+                      {profile.countryCode}
+                    </p>
                   </div>
                   <LedBadge status="info" label="World Bank Data" />
                 </div>
@@ -108,8 +112,15 @@ export default function GovernancePage() {
                   {indicators.map((ind) => {
                     const value = profile[ind.key] as number | null;
                     const status = getIndicatorStatus(value);
-                    const barColor = status.status === "ok" ? "var(--ok)" : status.status === "info" ? "var(--info)" : status.status === "warn" ? "var(--warn)" : "var(--danger)";
-                    
+                    const barColor =
+                      status.status === "ok"
+                        ? "var(--ok)"
+                        : status.status === "info"
+                          ? "var(--info)"
+                          : status.status === "warn"
+                            ? "var(--warn)"
+                            : "var(--danger)";
+
                     return (
                       <Panel key={ind.key} title={ind.label}>
                         <div className="space-y-2">
@@ -141,10 +152,10 @@ export default function GovernancePage() {
                 <Panel title="Instability Assessment" className="mt-4">
                   <div className="p-4 bg-[var(--bg-1)] rounded-[var(--radius-sm)] border border-[var(--border)]">
                     <p className="text-sm text-[var(--fg-1)] font-mono leading-relaxed">
-                      Composite instability is calculated from governance indicators. 
-                      Lower scores across political stability, rule of law, and accountability 
-                      suggest higher instability risk. Use these metrics alongside freedom indices 
-                      and sanctions data for comprehensive risk assessment.
+                      Composite instability is calculated from governance indicators. Lower scores
+                      across political stability, rule of law, and accountability suggest higher
+                      instability risk. Use these metrics alongside freedom indices and sanctions
+                      data for comprehensive risk assessment.
                     </p>
                   </div>
                 </Panel>
@@ -156,31 +167,35 @@ export default function GovernancePage() {
             <Panel title="Recently Viewed" className="mt-6">
               <DataTable<CountryGovernanceProfile>
                 columns={[
-                  { 
-                    key: "country", 
-                    header: "Country", 
+                  {
+                    key: "country",
+                    header: "Country",
                     render: (row) => (
                       <div>
-                        <p className="text-sm font-semibold text-[var(--fg-0)]">{row.countryName}</p>
-                        <p className="text-[10px] text-[var(--fg-muted)] font-mono">{row.countryCode}</p>
+                        <p className="text-sm font-semibold text-[var(--fg-0)]">
+                          {row.countryName}
+                        </p>
+                        <p className="text-[10px] text-[var(--fg-muted)] font-mono">
+                          {row.countryCode}
+                        </p>
                       </div>
-                    )
+                    ),
                   },
-                  { 
-                    key: "stability", 
-                    header: "Political Stability", 
+                  {
+                    key: "stability",
+                    header: "Political Stability",
                     render: (row) => {
                       const status = getIndicatorStatus(row.politicalStability);
                       return <LedBadge status={status.status} label={status.label} />;
-                    }
+                    },
                   },
-                  { 
-                    key: "corruption", 
-                    header: "Corruption Control", 
+                  {
+                    key: "corruption",
+                    header: "Corruption Control",
                     render: (row) => {
                       const status = getIndicatorStatus(row.controlOfCorruption);
                       return <LedBadge status={status.status} label={status.label} />;
-                    }
+                    },
                   },
                 ]}
                 rows={recentCountries}
@@ -200,8 +215,8 @@ export default function GovernancePage() {
             </Panel>
             <Panel title="Scale">
               <p className="text-xs text-[var(--fg-1)] font-mono">
-                All indicators range from approximately -2.5 to +2.5, 
-                with higher values indicating better governance outcomes.
+                All indicators range from approximately -2.5 to +2.5, with higher values indicating
+                better governance outcomes.
               </p>
             </Panel>
             <Panel title="Source">

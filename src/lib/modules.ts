@@ -25,7 +25,7 @@ export const modules: ModuleInfo[] = [
   { id: "M14", name: "Power Structure & Leadership Intel", status: "online" },
   { id: "M15", name: "Space & Orbital Tracker", status: "online" },
   { id: "M16", name: "Signal & Freedom Indices", status: "online" },
-  { id: "M17", name: "Multilingual Core", status: "standby" },
+  { id: "M17", name: "Multilingual Core", status: "online" },
 
   // ── Future roadmap ──
   { id: "M18", name: "Country Boundary Polygons", status: "standby" },
@@ -46,11 +46,13 @@ export const modules: ModuleInfo[] = [
   { id: "M33", name: "Live Webcams", status: "online" },
   { id: "M34", name: "Architectures - ASI, UNESCO, Etc.", status: "online" },
   { id: "M35", name: "Critical Minerals & Energy Infrastructure", status: "standby" },
-  { id: "M36", name: "Sanctions Layer", status: "standby" },
+  { id: "M36", name: "Sanctions Layer", status: "online" },
   { id: "M37", name: "Composite Country Instability Index", status: "standby" },
   { id: "M38", name: "Global Trade & Supply Chain Flows", status: "standby" },
   { id: "M39", name: "Global Migration & Diaspora Flows", status: "standby" },
   { id: "M40", name: "Military & Nuclear Sites Markers", status: "standby" },
   { id: "M41", name: "Live Civil Unrest (ACLED + Guardian)", status: "online" },
   { id: "M42", name: "Military Aircraft Live Tracker", status: "online" },
+  { id: "M43", name: "Governance Indicators (World Bank)", status: "online" },
+  { id: "M44", name: "Visa Requirements Tracker", status: "online" },
 ];

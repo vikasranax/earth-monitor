@@ -13,44 +13,41 @@ export interface WorldBankIndicator {
 export interface CountryGovernanceProfile {
   countryCode: string;
   countryName: string;
-  politicalStability: number | null; // PV.EST
-  controlOfCorruption: number | null; // CC.EST
-  ruleOfLaw: number | null; // RL.EST
-  voiceAndAccountability: number | null; // VA.EST
+  politicalStability: number | null;
+  controlOfCorruption: number | null;
+  ruleOfLaw: number | null;
+  voiceAndAccountability: number | null;
   cached: boolean;
   error?: string;
 }
 
 const WB_BASE = "https://api.worldbank.org/v2/country";
 
-async function fetchWbIndicator(countryCode: string, indicatorId: string): Promise<number | null> {
+async function fetchWbIndicator(countryCode: string, indicatorId: string): Promise<{ value: number | null; cached: boolean }> {
   try {
-    const { data } = await fetchWithCache(
-      `wb:${countryCode.toLowerCase()}:${indicatorId}`,
+    const { data, cached } = await fetchWithCache(
+      "wb:" + countryCode.toLowerCase() + ":" + indicatorId,
       async () => {
-        const res = await fetch(`${WB_BASE}/${countryCode}/indicator/${indicatorId}?format=json&date=2022:2024`);
-        if (!res.ok) throw new Error(`WB API ${res.status}`);
+        const res = await fetch(WB_BASE + "/" + countryCode + "/indicator/" + indicatorId + "?format=json&date=2022:2024");
+        if (!res.ok) throw new Error("WB API " + res.status);
         return (await res.json()) as unknown;
       },
-      { ttlSeconds: 86400 } // Cache for 24 hours
+      { ttlSeconds: 86400 },
     );
 
-    // World Bank returns [metadata, dataArray]
     const dataArray = Array.isArray(data) ? (data[1] as Array<Record<string, unknown>> | null) : null;
-    
-    if (!dataArray || dataArray.length === 0) return null;
+    if (!dataArray || dataArray.length === 0) return { value: null, cached };
 
-    // Find the most recent year with a non-null value
     for (const entry of dataArray) {
       const value = entry.value as number | null;
       const date = entry.date as string | undefined;
       if (value !== null && value !== undefined && date) {
-        return value;
+        return { value, cached };
       }
     }
-    return null;
+    return { value: null, cached };
   } catch {
-    return null;
+    return { value: null, cached: false };
   }
 }
 
@@ -61,36 +58,38 @@ export async function fetchCountryGovernanceProfile(countryCode: string): Promis
   }
 
   try {
-    // Fetch country name first
     const { data: nameData } = await fetchWithCache(
-      `wb:country-name:${countryCode.toLowerCase()}`,
+      "wb:country-name:" + countryCode.toLowerCase(),
       async () => {
-        const res = await fetch(`${WB_BASE}/${countryCode}?format=json`);
-        if (!res.ok) throw new Error(`WB Name API ${res.status}`);
+        const res = await fetch(WB_BASE + "/" + countryCode + "?format=json");
+        if (!res.ok) throw new Error("WB Name API " + res.status);
         return (await res.json()) as unknown;
       },
-      { ttlSeconds: 86400 }
+      { ttlSeconds: 86400 },
     );
 
     const nameArray = Array.isArray(nameData) ? (nameData[1] as Array<Record<string, unknown>> | null) : null;
     const countryName = (nameArray?.[0]?.name as string) || countryCode;
 
-    // Fetch indicators in parallel
     const [pv, cc, rl, va] = await Promise.all([
-      fetchWbIndicator(countryCode, "PV.EST"), // Political Stability
-      fetchWbIndicator(countryCode, "CC.EST"), // Control of Corruption
-      fetchWbIndicator(countryCode, "RL.EST"), // Rule of Law
-      fetchWbIndicator(countryCode, "VA.EST"), // Voice and Accountability
+      fetchWbIndicator(countryCode, "PV.EST"),
+      fetchWbIndicator(countryCode, "CC.EST"),
+      fetchWbIndicator(countryCode, "RL.EST"),
+      fetchWbIndicator(countryCode, "VA.EST"),
     ]);
+
+    // Honest cache reporting: only true if every indicator was actually
+    // served from cache, not hardcoded regardless of what really happened.
+    const allCached = pv.cached && cc.cached && rl.cached && va.cached;
 
     return {
       countryCode,
       countryName,
-      politicalStability: pv,
-      controlOfCorruption: cc,
-      ruleOfLaw: rl,
-      voiceAndAccountability: va,
-      cached: true, // Since we use fetchWithCache, assume cached or fresh-but-cached
+      politicalStability: pv.value,
+      controlOfCorruption: cc.value,
+      ruleOfLaw: rl.value,
+      voiceAndAccountability: va.value,
+      cached: allCached,
     };
   } catch (err) {
     return {

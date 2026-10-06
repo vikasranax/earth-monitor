@@ -1,0 +1,148 @@
+// Starter core-UI dictionary — chrome/navigation strings only, not full
+// page content. This is a first pass, not exhaustive: same honesty
+// standard as the Press Freedom / Elections starter sets elsewhere in
+// this project. Technical and political terminology especially benefits
+// from native-speaker review before treating any translation here as
+// final — flag corrections via an issue rather than assuming perfection.
+export type TranslationKey =
+  | "appName" | "tagline" | "navHome" | "navMap" | "navNews" | "navMarkets"
+  | "navShipping" | "navAirspace" | "navPowerStructure" | "navDashboards"
+  | "navWatchlist" | "navElections" | "navSpace" | "live" | "cached"
+  | "loading" | "error" | "notArmed" | "search" | "close" | "send"
+  | "askCopilot" | "systemReadiness" | "providersArmed" | "modulesOnline"
+  | "day" | "night" | "language";
+
+export const translations: Record<string, Record<TranslationKey, string>> = {
+  en: {
+    appName: "Earth Monitor", tagline: "The churning of the world",
+    navHome: "Home", navMap: "Map", navNews: "News", navMarkets: "Markets",
+    navShipping: "Shipping", navAirspace: "Airspace", navPowerStructure: "Power Structure",
+    navDashboards: "Dashboards", navWatchlist: "Watchlist", navElections: "Elections",
+    navSpace: "Space", live: "Live", cached: "Cached", loading: "Loading",
+    error: "Error", notArmed: "Not Armed", search: "Search", close: "Close",
+    send: "Send", askCopilot: "Ask Copilot", systemReadiness: "System Readiness",
+    providersArmed: "Providers Armed", modulesOnline: "Modules Online",
+    day: "Day", night: "Night", language: "Language",
+  },
+  hi: {
+    appName: "अर्थ मॉनिटर", tagline: "जगत् का मंथन",
+    navHome: "मुखपृष्ठ", navMap: "मानचित्र", navNews: "समाचार", navMarkets: "बाज़ार",
+    navShipping: "पोत परिवहन", navAirspace: "वायु क्षेत्र", navPowerStructure: "सत्ता संरचना",
+    navDashboards: "डैशबोर्ड", navWatchlist: "वॉचलिस्ट", navElections: "चुनाव",
+    navSpace: "अंतरिक्ष", live: "लाइव", cached: "कैश्ड", loading: "लोड हो रहा है",
+    error: "त्रुटि", notArmed: "सक्रिय नहीं", search: "खोजें", close: "बंद करें",
+    send: "भेजें", askCopilot: "कोपायलट से पूछें", systemReadiness: "सिस्टम तत्परता",
+    providersArmed: "सक्रिय प्रदाता", modulesOnline: "ऑनलाइन मॉड्यूल",
+    day: "दिन", night: "रात", language: "भाषा",
+  },
+  sa: {
+    appName: "धरा-दर्शकः", tagline: "जगतः मन्थनम्",
+    navHome: "गृहम्", navMap: "मानचित्रम्", navNews: "वार्ताः", navMarkets: "आपणाः",
+    navShipping: "नौवहनम्", navAirspace: "आकाशक्षेत्रम्", navPowerStructure: "शक्तिसंरचना",
+    navDashboards: "फलकानि", navWatchlist: "निरीक्षणसूची", navElections: "निर्वाचनम्",
+    navSpace: "अन्तरिक्षम्", live: "प्रत्यक्षम्", cached: "सङ्गृहीतम्", loading: "भारः क्रियते",
+    error: "दोषः", notArmed: "असज्जितम्", search: "अन्वेषणम्", close: "पिधानम्",
+    send: "प्रेषणम्", askCopilot: "सहायकं पृच्छतु", systemReadiness: "व्यवस्था-सज्जता",
+    providersArmed: "सज्जित-स्रोतः", modulesOnline: "सक्रिय-अंशाः",
+    day: "दिवसः", night: "रात्रिः", language: "भाषा",
+  },
+  ar: {
+    appName: "مراقب الأرض", tagline: "خضّ العالم",
+    navHome: "الرئيسية", navMap: "الخريطة", navNews: "الأخبار", navMarkets: "الأسواق",
+    navShipping: "الشحن", navAirspace: "المجال الجوي", navPowerStructure: "هيكل السلطة",
+    navDashboards: "لوحات المعلومات", navWatchlist: "قائمة المتابعة", navElections: "الانتخابات",
+    navSpace: "الفضاء", live: "مباشر", cached: "مخزّن مؤقتًا", loading: "جارٍ التحميل",
+    error: "خطأ", notArmed: "غير مفعّل", search: "بحث", close: "إغلاق",
+    send: "إرسال", askCopilot: "اسأل المساعد", systemReadiness: "جاهزية النظام",
+    providersArmed: "المزوّدون المفعّلون", modulesOnline: "الوحدات المتصلة",
+    day: "نهار", night: "ليل", language: "اللغة",
+  },
+  fr: {
+    appName: "Earth Monitor", tagline: "Le brassage du monde",
+    navHome: "Accueil", navMap: "Carte", navNews: "Actualités", navMarkets: "Marchés",
+    navShipping: "Transport maritime", navAirspace: "Espace aérien", navPowerStructure: "Structure du pouvoir",
+    navDashboards: "Tableaux de bord", navWatchlist: "Liste de suivi", navElections: "Élections",
+    navSpace: "Espace", live: "En direct", cached: "En cache", loading: "Chargement",
+    error: "Erreur", notArmed: "Non activé", search: "Rechercher", close: "Fermer",
+    send: "Envoyer", askCopilot: "Demander au Copilot", systemReadiness: "État du système",
+    providersArmed: "Fournisseurs actifs", modulesOnline: "Modules en ligne",
+    day: "Jour", night: "Nuit", language: "Langue",
+  },
+  es: {
+    appName: "Earth Monitor", tagline: "El batido del mundo",
+    navHome: "Inicio", navMap: "Mapa", navNews: "Noticias", navMarkets: "Mercados",
+    navShipping: "Transporte marítimo", navAirspace: "Espacio aéreo", navPowerStructure: "Estructura de poder",
+    navDashboards: "Paneles", navWatchlist: "Lista de seguimiento", navElections: "Elecciones",
+    navSpace: "Espacio", live: "En vivo", cached: "En caché", loading: "Cargando",
+    error: "Error", notArmed: "No activado", search: "Buscar", close: "Cerrar",
+    send: "Enviar", askCopilot: "Preguntar al Copiloto", systemReadiness: "Estado del sistema",
+    providersArmed: "Proveedores activos", modulesOnline: "Módulos en línea",
+    day: "Día", night: "Noche", language: "Idioma",
+  },
+  ru: {
+    appName: "Earth Monitor", tagline: "Пахтание мира",
+    navHome: "Главная", navMap: "Карта", navNews: "Новости", navMarkets: "Рынки",
+    navShipping: "Судоходство", navAirspace: "Воздушное пространство", navPowerStructure: "Структура власти",
+    navDashboards: "Панели", navWatchlist: "Список отслеживания", navElections: "Выборы",
+    navSpace: "Космос", live: "Онлайн", cached: "Кэшировано", loading: "Загрузка",
+    error: "Ошибка", notArmed: "Не активировано", search: "Поиск", close: "Закрыть",
+    send: "Отправить", askCopilot: "Спросить Copilot", systemReadiness: "Готовность системы",
+    providersArmed: "Активные источники", modulesOnline: "Модули онлайн",
+    day: "День", night: "Ночь", language: "Язык",
+  },
+  zh: {
+    appName: "地球监测", tagline: "搅动世界",
+    navHome: "首页", navMap: "地图", navNews: "新闻", navMarkets: "市场",
+    navShipping: "航运", navAirspace: "空域", navPowerStructure: "权力结构",
+    navDashboards: "仪表板", navWatchlist: "关注列表", navElections: "选举",
+    navSpace: "太空", live: "实时", cached: "已缓存", loading: "加载中",
+    error: "错误", notArmed: "未启用", search: "搜索", close: "关闭",
+    send: "发送", askCopilot: "询问副驾驶", systemReadiness: "系统就绪度",
+    providersArmed: "已启用数据源", modulesOnline: "在线模块",
+    day: "白天", night: "夜晚", language: "语言",
+  },
+  ta: {
+    appName: "எர்த் மானிட்டர்", tagline: "உலகின் கடைச்சல்",
+    navHome: "முகப்பு", navMap: "வரைபடம்", navNews: "செய்திகள்", navMarkets: "சந்தைகள்",
+    navShipping: "கப்பல் போக்குவரத்து", navAirspace: "வான்வெளி", navPowerStructure: "அதிகார அமைப்பு",
+    navDashboards: "டாஷ்போர்டுகள்", navWatchlist: "கண்காணிப்பு பட்டியல்", navElections: "தேர்தல்கள்",
+    navSpace: "விண்வெளி", live: "நேரலை", cached: "தற்காலிகசேமிப்பு", loading: "ஏற்றுகிறது",
+    error: "பிழை", notArmed: "செயல்படுத்தப்படவில்லை", search: "தேடு", close: "மூடு",
+    send: "அனுப்பு", askCopilot: "கோபைலட்டிடம் கேளுங்கள்", systemReadiness: "கணினி தயார்நிலை",
+    providersArmed: "செயல்படுத்தப்பட்ட வழங்குநர்கள்", modulesOnline: "இணைப்பில் உள்ள தொகுதிகள்",
+    day: "பகல்", night: "இரவு", language: "மொழி",
+  },
+  te: {
+    appName: "ఎర్త్ మానిటర్", tagline: "ప్రపంచ మథనం",
+    navHome: "హోమ్", navMap: "మ్యాప్", navNews: "వార్తలు", navMarkets: "మార్కెట్లు",
+    navShipping: "షిప్పింగ్", navAirspace: "గగనతలం", navPowerStructure: "అధికార నిర్మాణం",
+    navDashboards: "డాష్‌బోర్డులు", navWatchlist: "వాచ్‌లిస్ట్", navElections: "ఎన్నికలు",
+    navSpace: "అంతరిక్షం", live: "ప్రత్యక్షం", cached: "కాష్ చేయబడింది", loading: "లోడ్ అవుతోంది",
+    error: "లోపం", notArmed: "సక్రియం కాలేదు", search: "శోధించు", close: "మూసివేయి",
+    send: "పంపు", askCopilot: "కోపైలట్‌ని అడగండి", systemReadiness: "సిస్టమ్ సంసిద్ధత",
+    providersArmed: "సక్రియ ప్రొవైడర్లు", modulesOnline: "ఆన్‌లైన్ మాడ్యూల్స్",
+    day: "పగలు", night: "రాత్రి", language: "భాష",
+  },
+  kn: {
+    appName: "ಅರ್ಥ್ ಮಾನಿಟರ್", tagline: "ಜಗತ್ತಿನ ಮಂಥನ",
+    navHome: "ಮುಖಪುಟ", navMap: "ನಕ್ಷೆ", navNews: "ಸುದ್ದಿ", navMarkets: "ಮಾರುಕಟ್ಟೆಗಳು",
+    navShipping: "ಹಡಗು ಸಾಗಣೆ", navAirspace: "ವಾಯುಪ್ರದೇಶ", navPowerStructure: "ಅಧಿಕಾರ ರಚನೆ",
+    navDashboards: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗಳು", navWatchlist: "ವಾಚ್‌ಲಿಸ್ಟ್", navElections: "ಚುನಾವಣೆಗಳು",
+    navSpace: "ಬಾಹ್ಯಾಕಾಶ", live: "ನೇರ", cached: "ಕ್ಯಾಶ್ ಮಾಡಲಾಗಿದೆ", loading: "ಲೋಡ್ ಆಗುತ್ತಿದೆ",
+    error: "ದೋಷ", notArmed: "ಸಕ್ರಿಯವಾಗಿಲ್ಲ", search: "ಹುಡುಕಿ", close: "ಮುಚ್ಚಿ",
+    send: "ಕಳುಹಿಸಿ", askCopilot: "ಕೋಪೈಲಟ್‌ಗೆ ಕೇಳಿ", systemReadiness: "ಸಿಸ್ಟಂ ಸಿದ್ಧತೆ",
+    providersArmed: "ಸಕ್ರಿಯ ಪೂರೈಕೆದಾರರು", modulesOnline: "ಆನ್‌ಲೈನ್ ಮಾಡ್ಯೂಲ್‌ಗಳು",
+    day: "ಹಗಲು", night: "ರಾತ್ರಿ", language: "ಭಾಷೆ",
+  },
+  ml: {
+    appName: "എർത്ത് മോണിറ്റർ", tagline: "ലോക മഥനം",
+    navHome: "ഹോം", navMap: "ഭൂപടം", navNews: "വാർത്തകൾ", navMarkets: "മാർക്കറ്റുകൾ",
+    navShipping: "ഷിപ്പിംഗ്", navAirspace: "വ്യോമമേഖല", navPowerStructure: "അധികാര ഘടന",
+    navDashboards: "ഡാഷ്‌ബോർഡുകൾ", navWatchlist: "വാച്ച്‌ലിസ്റ്റ്", navElections: "തിരഞ്ഞെടുപ്പുകൾ",
+    navSpace: "ബഹിരാകാശം", live: "തത്സമയം", cached: "കാഷെ ചെയ്തു", loading: "ലോഡ് ചെയ്യുന്നു",
+    error: "പിശക്", notArmed: "സജീവമല്ല", search: "തിരയുക", close: "അടയ്ക്കുക",
+    send: "അയയ്ക്കുക", askCopilot: "കോപൈലറ്റിനോട് ചോദിക്കുക", systemReadiness: "സിസ്റ്റം സന്നദ്ധത",
+    providersArmed: "സജീവ ദാതാക്കൾ", modulesOnline: "ഓൺലൈൻ മൊഡ്യൂളുകൾ",
+    day: "പകൽ", night: "രാത്രി", language: "ഭാഷ",
+  },
+};

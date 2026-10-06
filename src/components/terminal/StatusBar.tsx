@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSettingsStore } from "@/stores/settings";
 import { Sun, Moon, Command } from "lucide-react";
+import { LanguageSelector } from "@/components/i18n/LanguageSelector";
 
 export function StatusBar() {
   const { theme, toggleTheme, toggleCommandPalette } = useSettingsStore();
@@ -20,9 +21,7 @@ export function StatusBar() {
   return (
     <div className="flex items-center justify-between h-9 px-4 border-b border-[var(--border)] bg-[var(--bg-1)] font-mono text-xs text-[var(--fg-1)]">
       <div className="flex items-center gap-4">
-        <span className="text-[var(--accent)] font-semibold tracking-wide">
-          जगत्-मन्थन
-        </span>
+        <span className="text-[var(--accent)] font-semibold tracking-wide">जगत्-मन्थन</span>
         <span className="text-[var(--fg-2)]">EARTH MONITOR</span>
       </div>
 
@@ -42,6 +41,7 @@ export function StatusBar() {
         >
           {theme === "dark" ? <Sun size={12} /> : <Moon size={12} />}
         </button>
+        <LanguageSelector />
       </div>
     </div>
   );
