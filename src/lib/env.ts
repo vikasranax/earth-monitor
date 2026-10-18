@@ -5,6 +5,12 @@
  * Design (AD-03/AD-08): every provider key is OPTIONAL at the schema level so
  * a fresh clone boots clean; readiness() reports which providers are armed.
  * Malformed values (e.g. a non-URL SITE_URL) fail boot with an actionable message.
+ *
+ * 2026-10: OPENSKY_USER/OPENSKY_PASS (Basic Auth) removed — deprecated by
+ * OpenSky for accounts created after March 2025. Use OPENSKY_CLIENT_ID +
+ * OPENSKY_CLIENT_SECRET (OAuth2 client credentials) instead.
+ * Added: NASA_FIRMS_MAP_KEY (M21 wildfires), OPENSANCTIONS_API_KEY (M36),
+ * LOCATIONIQ_API_KEY (reliable geocoding).
  */
 import { z } from "zod";
 import { publicEnv } from "@/lib/env.public";
@@ -29,9 +35,12 @@ export const serverEnvSchema = z.object({
   FRED_API_KEY: z.string().optional(),
   EIA_API_KEY: z.string().optional(),
   NASA_API_KEY: z.string().optional(),
+  NASA_FIRMS_MAP_KEY: z.string().optional(),
+  OPENSANCTIONS_API_KEY: z.string().optional(),
 
-  OPENSKY_USER: z.string().optional(),
-  OPENSKY_PASS: z.string().optional(),
+  // OpenSky OAuth2 client credentials (NOT Basic Auth — deprecated 2025-03).
+  OPENSKY_CLIENT_ID: z.string().optional(),
+  OPENSKY_CLIENT_SECRET: z.string().optional(),
 
   OPENAQ_KEY: z.string().optional(),
   CLOUDFLARE_RADAR_TOKEN: z.string().optional(),
@@ -63,7 +72,7 @@ if (!parsed.success) {
 
 export const serverEnv: ServerEnv = parsed.data;
 
-/* ── readiness report ─────────────────────────────────────────── */
+/* ── readiness report ───────────────────────────────────────────*/
 
 export interface ReadinessItem {
   key: string;
@@ -129,7 +138,25 @@ export function readiness(): Readiness {
         { key: "TWELVEDATA_API_KEY", armed: Boolean(s.TWELVEDATA_API_KEY) },
         { key: "FRED_API_KEY", armed: Boolean(s.FRED_API_KEY) },
         { key: "EIA_API_KEY", armed: Boolean(s.EIA_API_KEY) },
-        { key: "NASA_API_KEY", armed: Boolean(s.NASA_API_KEY) },
+      ],
+    },
+    {
+      id: "space",
+      label: "SPACE",
+      items: [{ key: "NASA_API_KEY", armed: Boolean(s.NASA_API_KEY) }],
+    },
+    {
+      id: "wildfires",
+      label: "WILDFIRES",
+      items: [
+        { key: "NASA_FIRMS_MAP_KEY", armed: Boolean(s.NASA_FIRMS_MAP_KEY), optional: true },
+      ],
+    },
+    {
+      id: "sanctions",
+      label: "SANCTIONS",
+      items: [
+        { key: "OPENSANCTIONS_API_KEY", armed: Boolean(s.OPENSANCTIONS_API_KEY), optional: true },
       ],
     },
     {
@@ -142,7 +169,13 @@ export function readiness(): Readiness {
     {
       id: "flights",
       label: "AIRSPACE",
-      items: [{ key: "OPENSKY_USER", armed: Boolean(s.OPENSKY_USER), optional: true }],
+      items: [
+        {
+          key: "OPENSKY_CLIENT_ID",
+          armed: Boolean(s.OPENSKY_CLIENT_ID && s.OPENSKY_CLIENT_SECRET),
+          optional: true,
+        },
+      ],
     },
     {
       id: "ai",
@@ -171,6 +204,13 @@ export function readiness(): Readiness {
       label: "CIVIL UNREST",
       items: [
         { key: "ACLED_EMAIL", armed: Boolean(s.ACLED_EMAIL && s.ACLED_PASSWORD), optional: true },
+      ],
+    },
+    {
+      id: "geocoding",
+      label: "GEOCODING",
+      items: [
+        { key: "LOCATIONIQ_API_KEY", armed: Boolean(s.LOCATIONIQ_API_KEY), optional: true },
       ],
     },
   ];
