@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { readiness } from "@/lib/env";
+import { readiness, serverEnv } from "@/lib/env";
 import { fetchPowerStructure } from "@/lib/providers/power-structure";
 import { isRedisArmed } from "@/lib/redis";
 import { modules, type ModuleInfo } from "@/lib/modules";
@@ -17,49 +17,63 @@ import {
   WorldClock,
 } from "@/components/terminal";
 
-// Curated for variety: two nuclear powers in active tension (RU/UA), the
-// three largest economies/populations (US/CN/IN), and a constitutional
-// monarchy for government-type contrast (GB). Easy to swap — just edit this array.
+// Re-generate the homepage at most every 15 minutes (ISR). Without this, Next
+// prerenders it once at build time and the date, leaders and readiness freeze.
+export const revalidate = 900;
+
+// Curated for variety and for India/Asia relevance: India, two nuclear powers
+// in active tension (RU), the largest East Asian economy (CN), the US, plus
+// Iran and North Korea for West/East Asia security context. Edit freely.
 const HIGHLIGHT_COUNTRY_CODES = ["IN", "RU", "CN", "US", "IR", "KP"];
+
+type Leaders = Awaited<ReturnType<typeof fetchPowerStructure>>["leaders"];
 
 export default async function HomeCommandDeck() {
   const r = readiness();
   const redisArmed = isRedisArmed();
-  const readinessPct = Math.round((r.armedCount / r.totalCount) * 100);
+  const readinessPct = Math.round((r.armedCount / Math.max(r.totalCount, 1)) * 100);
   const modulesOnline = modules.filter((m) => m.status === "online").length;
-  const power = await fetchPowerStructure();
-  const tickerItems = r.groups.map((g) => ({
-    label: g.label,
-    value: `${g.items.filter((i) => i.armed).length}/${g.items.length}`,
-  }));
+
+  // Never let a Wikidata hiccup take down the whole homepage.
+  let leaders: Leaders = [];
+  try {
+    leaders = (await fetchPowerStructure()).leaders;
+  } catch {
+    leaders = [];
+  }
+
+  // Groups whose keys exist in the schema but are not consumed by any code
+  // are shown as NOT WIRED instead of a misleading 0/N.
+  const groupStats = r.groups.map((g) => {
+    const wired = g.items.filter((i) => i.wired !== false);
+    return { id: g.id, label: g.label, wiredCount: wired.length, armed: wired.filter((i) => i.armed).length };
+  });
+
+  const tickerItems = groupStats
+    .filter((g) => g.wiredCount > 0)
+    .map((g) => ({ label: g.label, value: `${g.armed}/${g.wiredCount}` }));
+
+  const sanctionsDesc = serverEnv.OPENSANCTIONS_API_KEY ? "· OpenSanctions" : "· Sample data";
 
   const navItems = [
     { href: "/dashboards", label: "Thematic Deck", icon: "◈", desc: "· Unified view" },
-    { href: "/map", label: "Global Map", icon: "◎", desc: "· Multilayer globe" },
-    { href: "/news", label: "News Wire", icon: "⚡", desc: "· Guardian API" },
-    { href: "/markets", label: "Markets", icon: "$", desc: "· TwelveData" },
+    { href: "/map", label: "Global Map", icon: "◎", desc: "· Multilayer map" },
+    { href: "/news", label: "News Wire", icon: "⚡", desc: "· Guardian + RSS" },
+    { href: "/markets", label: "Markets", icon: "$", desc: "· Yahoo · TwelveData" },
     { href: "/groups", label: "Groups", icon: "⊕", desc: "· G20 · BRICS · SCO" },
     { href: "/shipping", label: "Shipping", icon: "▣", desc: "· AIS Stream" },
     { href: "/airspace", label: "Airspace", icon: "✈", desc: "· OpenSky" },
     { href: "/hazard", label: "Hazard", icon: "▲", desc: "· USGS" },
-    {
-      href: "/infrastructure",
-      label: "Infrastructure",
-      icon: "◉",
-      desc: "· Cables & outages",
-    },
+    { href: "/infrastructure", label: "Infrastructure", icon: "◉", desc: "· Submarine cables" },
     { href: "/power-structure", label: "Power Structure", icon: "♛", desc: "· Wikidata live" },
-    { href: "/space", label: "Space Tracker", icon: "☄", desc: "· Launch library" },
-    {
-      href: "/signal-freedom",
-      label: "Signal & Freedom",
-      icon: "▤",
-      desc: "· Press & digital freedom",
-    },
-    { href: "/sanctions", label: "Sanctions", icon: "⚠", desc: "· Watchlists & PEPs" },
-    { href: "/governance", label: "Governance", icon: "⚖", desc: "· Instability index" },
+    { href: "/space", label: "Space Tracker", icon: "☄", desc: "· Launch Library 2" },
+    { href: "/signal-freedom", label: "Signal & Freedom", icon: "▤", desc: "· Press freedom" },
+    { href: "/sanctions", label: "Sanctions", icon: "⚠", desc: sanctionsDesc },
+    { href: "/governance", label: "Governance", icon: "⚖", desc: "· World Bank WGI" },
+    { href: "/architecture", label: "Architecture", icon: "▥", desc: "· Wonders & heritage" },
+    { href: "/visas", label: "Visas", icon: "✦", desc: "· Entry requirements" },
     { href: "/watchlist", label: "Watchlist", icon: "★", desc: "· Alerts & saves" },
-    { href: "/elections", label: "Elections", icon: "🗳", desc: "· Calendar & results" },
+    { href: "/elections", label: "Elections", icon: "🗳", desc: "· Calendar" },
   ];
 
   return (
@@ -74,7 +88,7 @@ export default async function HomeCommandDeck() {
             <KpiCard label="Cache" value={redisArmed ? "REDIS" : "IN-MEMORY"} />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -98,13 +112,13 @@ export default async function HomeCommandDeck() {
               eyebrow="LIVE"
               className="md:col-span-1 flex items-center justify-center"
             >
-              <RiskGauge score={readinessPct} label="PROVIDERS ARMED" />
+              <RiskGauge score={readinessPct} label={`${r.armedCount}/${r.totalCount} ARMED`} />
             </Panel>
             <Panel title="Provider Groups" eyebrow="LIVE" className="md:col-span-2">
               <div className="flex flex-col gap-2">
-                {r.groups.map((g) => {
-                  const armedCount = g.items.filter((i) => i.armed).length;
-                  const allArmed = armedCount === g.items.length;
+                {groupStats.map((g) => {
+                  const notWired = g.wiredCount === 0;
+                  const allArmed = !notWired && g.armed === g.wiredCount;
                   return (
                     <div
                       key={g.id}
@@ -112,8 +126,8 @@ export default async function HomeCommandDeck() {
                     >
                       <span className="font-mono text-xs text-[var(--fg-1)]">{g.label}</span>
                       <LedBadge
-                        status={allArmed ? "ok" : armedCount > 0 ? "warn" : "idle"}
-                        label={`${armedCount}/${g.items.length}`}
+                        status={notWired ? "idle" : allArmed ? "ok" : g.armed > 0 ? "warn" : "idle"}
+                        label={notWired ? "NOT WIRED" : `${g.armed}/${g.wiredCount}`}
                       />
                     </div>
                   );
@@ -123,22 +137,28 @@ export default async function HomeCommandDeck() {
           </div>
 
           <Panel title="Power Structure Highlight" eyebrow="WIKIDATA · LIVE">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {HIGHLIGHT_COUNTRY_CODES.map((code) => {
-                const countryLeaders = power.leaders.filter((l) => l.countryCode === code);
-                const top =
-                  countryLeaders.find((l) => l.role === "head_of_state") ?? countryLeaders[0];
-                if (!top) return null;
-                return (
-                  <div key={code} className="font-mono text-xs">
-                    <div className="text-[var(--fg-2)] uppercase tracking-widest text-[10px]">
-                      {code} · {top.countryName}
+            {leaders.length === 0 ? (
+              <p className="font-mono text-xs text-[var(--fg-2)]">
+                Wikidata is unreachable right now — showing nothing rather than stale names.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {HIGHLIGHT_COUNTRY_CODES.map((code) => {
+                  const countryLeaders = leaders.filter((l) => l.countryCode === code);
+                  const top =
+                    countryLeaders.find((l) => l.role === "head_of_state") ?? countryLeaders[0];
+                  if (!top) return null;
+                  return (
+                    <div key={code} className="font-mono text-xs">
+                      <div className="text-[var(--fg-2)] uppercase tracking-widest text-[10px]">
+                        {code} · {top.countryName}
+                      </div>
+                      <div className="text-[var(--fg-0)]">{top.personName}</div>
                     </div>
-                    <div className="text-[var(--fg-0)]">{top.personName}</div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </Panel>
 
           <OnThisDay />
