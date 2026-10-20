@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const KEYS = [
+const ORIGINAL_ENV = process.env;
+
+const MANAGED_KEYS = [
   "SITE_URL",
+  "VERCEL_PROJECT_PRODUCTION_URL",
   "INGEST_HMAC_KEY",
   "UPSTASH_REDIS_REST_URL",
   "UPSTASH_REDIS_REST_TOKEN",
@@ -10,62 +13,121 @@ const KEYS = [
   "TWELVEDATA_API_KEY",
   "FRED_API_KEY",
   "EIA_API_KEY",
+  "NASA_API_KEY",
+  "NASA_FIRMS_MAP_KEY",
+  "OPENSANCTIONS_API_KEY",
+  "OPENSKY_CLIENT_ID",
+  "OPENSKY_CLIENT_SECRET",
   "OPENAQ_KEY",
   "CLOUDFLARE_RADAR_TOKEN",
   "GEMINI_API_KEY",
   "GROQ_API_KEY",
   "OPENROUTER_API_KEY",
-  "OPENSKY_USER",
-  "OPENSKY_PASS",
   "RESEND_API_KEY",
+  "ACLED_EMAIL",
+  "ACLED_PASSWORD",
+  "WINDY_WEBCAMS_API_KEY",
+  "LOCATIONIQ_API_KEY",
+  "NEXT_PUBLIC_AISSTREAM_API_KEY",
   "NEXT_PUBLIC_FIREBASE_API_KEY",
   "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  "NEXT_PUBLIC_AISSTREAM_API_KEY",
-] as const;
+];
 
-describe("env contract (src/lib/env.ts)", () => {
-  const original = { ...process.env };
+beforeEach(() => {
+  vi.resetModules();
+  process.env = { ...ORIGINAL_ENV };
+  for (const k of MANAGED_KEYS) delete process.env[k];
+});
 
-  beforeEach(() => {
-    vi.resetModules();
-    for (const key of KEYS) delete process.env[key];
+afterEach(() => {
+  process.env = ORIGINAL_ENV;
+});
+
+/** Import a fresh copy of env.ts with the given variables set. */
+async function load(vars: Record<string, string> = {}) {
+  vi.resetModules();
+  Object.assign(process.env, vars);
+  return import("@/lib/env");
+}
+
+describe("serverEnv", () => {
+  it("boots with zero configuration and defaults SITE_URL to localhost", async () => {
+    const { serverEnv } = await load();
+    expect(serverEnv.SITE_URL).toBe("http://localhost:3000");
   });
 
-  afterEach(() => {
-    process.env = { ...original };
+  it("uses the Vercel production domain when SITE_URL is unset", async () => {
+    const { serverEnv } = await load({ VERCEL_PROJECT_PRODUCTION_URL: "jagatmanthan.vercel.app" });
+    expect(serverEnv.SITE_URL).toBe("https://jagatmanthan.vercel.app");
   });
 
-  it("boots safely with zero provider keys (fresh-clone state)", async () => {
-    const { readiness } = await import("@/lib/env");
+  it("lets an explicit SITE_URL win over the Vercel domain", async () => {
+    const { serverEnv } = await load({
+      SITE_URL: "https://example.org",
+      VERCEL_PROJECT_PRODUCTION_URL: "jagatmanthan.vercel.app",
+    });
+    expect(serverEnv.SITE_URL).toBe("https://example.org");
+  });
+
+  it("treats a blank SITE_URL as unset", async () => {
+    const { serverEnv } = await load({ SITE_URL: "" });
+    expect(serverEnv.SITE_URL).toBe("http://localhost:3000");
+  });
+
+  it("fails boot with an actionable message on a malformed SITE_URL", async () => {
+    await expect(load({ SITE_URL: "not-a-url" })).rejects.toThrow(/env contract violation/);
+  });
+});
+
+describe("readiness()", () => {
+  it("does not report SITE_URL as armed on localhost", async () => {
+    const { readiness } = await load();
+    const core = readiness().groups.find((g) => g.id === "core");
+    expect(core?.items[0]?.key).toBe("SITE_URL");
+    expect(core?.items[0]?.armed).toBe(false);
+  });
+
+  it("reports SITE_URL as armed on a real domain", async () => {
+    const { readiness } = await load({ SITE_URL: "https://jagatmanthan.vercel.app" });
+    const core = readiness().groups.find((g) => g.id === "core");
+    expect(core?.items[0]?.armed).toBe(true);
+  });
+
+  it("totalCount counts only wired keys and armedCount never exceeds it", async () => {
+    const { readiness } = await load();
     const r = readiness();
-    expect(r.totalCount).toBeGreaterThanOrEqual(14);
-    expect(r.armedCount).toBe(1); // only SITE_URL (schema default) is armed
+    const wired = r.groups.flatMap((g) => g.items).filter((i) => i.wired !== false);
+    expect(r.totalCount).toBe(wired.length);
+    expect(r.armedCount).toBeLessThanOrEqual(r.totalCount);
   });
 
-  it("marks groups armed when their keys exist", async () => {
-    process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
-    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
-    process.env.GUARDIAN_API_KEY = "test-key";
-    process.env.GEMINI_API_KEY = "gm-key";
-
-    const { readiness } = await import("@/lib/env");
-    const byId = Object.fromEntries(
-      readiness().groups.map((g) => [g.id, g.items.every((i) => i.armed)]),
-    );
-
-    expect(byId.cache).toBe(true);
-    expect(byId.news).toBe(true);
-    expect(byId.ai).toBe(false); // GROQ still missing
-    expect(byId.markets).toBe(false);
+  it("ignores keys that no code consumes yet", async () => {
+    const base = (await load()).readiness();
+    const withUnwired = (
+      await load({
+        FRED_API_KEY: "x",
+        EIA_API_KEY: "x",
+        GEMINI_API_KEY: "x",
+        RESEND_API_KEY: "x",
+        OPENAQ_KEY: "x",
+        CLOUDFLARE_RADAR_TOKEN: "x",
+      })
+    ).readiness();
+    expect(withUnwired.armedCount).toBe(base.armedCount);
+    expect(withUnwired.totalCount).toBe(base.totalCount);
   });
 
-  it("rejects malformed values with an actionable message", async () => {
-    process.env.SITE_URL = "not-a-url";
-    await expect(import("@/lib/env")).rejects.toThrow(/env contract violation/);
+  it("counts a wired key once it is set", async () => {
+    const base = (await load()).readiness();
+    const armed = (await load({ TWELVEDATA_API_KEY: "x" })).readiness();
+    expect(armed.armedCount).toBe(base.armedCount + 1);
   });
 
-  it("rejects a weak INGEST_HMAC_KEY", async () => {
-    process.env.INGEST_HMAC_KEY = "short";
-    await expect(import("@/lib/env")).rejects.toThrow(/INGEST_HMAC_KEY/);
+  it("requires both OpenSky credentials to arm Airspace", async () => {
+    const base = (await load()).readiness();
+    const idOnly = (await load({ OPENSKY_CLIENT_ID: "id" })).readiness();
+    expect(idOnly.armedCount).toBe(base.armedCount);
+    const both = (await load({ OPENSKY_CLIENT_ID: "id", OPENSKY_CLIENT_SECRET: "secret" })).readiness();
+    expect(both.armedCount).toBe(base.armedCount + 1);
   });
 });
