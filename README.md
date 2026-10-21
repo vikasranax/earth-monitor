@@ -1,173 +1,155 @@
 # जगत्-मन्थन · Earth Monitor
 
-**The churning of the world.** An open-source, real-time global intelligence terminal — geopolitics, markets, shipping, airspace, disasters, cyber, and space, ingested live and unified into one Bloomberg-grade dashboard.
+**The churning of the world.** An open-source, real-time global intelligence dashboard — geopolitics, markets, shipping, airspace, disasters, power structure, sanctions, governance and more, unified in one terminal-styled interface and built on free data sources.
 
 🔴 **Live:** [jagatmanthan.vercel.app](https://jagatmanthan.vercel.app)
 
 ---
 
-## What it does
+## Why this exists
 
-Earth Monitor tracks what's actually happening on the planet right now, grounded in real data — not summaries written after the fact. It's built in public, in numbered modules, entirely on free-tier infrastructure.
+The aim is the most useful, **honest**, free real-time view of the planet — depth and correctness over feature count. India and Asia are first-class in framing and curation, not an afterthought. If something isn't live, the interface says so.
 
-### Currently Live (M01–M12)
+## What it covers
 
-| Module | Feature                                                                           | Status    |
-| ------ | --------------------------------------------------------------------------------- | --------- |
-| M01    | Foundation & DevEx — env contract, CI gate, boot screen                           | ✅ Online |
-| M05    | Global map with country dossiers & disputed territories                           | ✅ Online |
-| M06    | **News Wire** — 20 sources (Guardian + 18 regional RSS) grouped by region & topic | ✅ Online |
-| M07    | **Markets Suite** — 62 symbols across 9 regions via TwelveData                    | ✅ Online |
-| M09a   | Hazard layer (USGS earthquakes — sample data)                                     | ✅ Online |
-| M11    | Alerts, auth, personalisation scaffolding                                         | ✅ Online |
-| M12    | **AI Copilot** — streaming, multilingual, cites live data                         | ✅ Online |
+Module status lives in [`src/lib/modules.ts`](src/lib/modules.ts) — that file is the single source of truth, and the homepage renders it live.
 
-### Copilot Capabilities
+| Area | What you get |
+| --- | --- |
+| **Map** | Multilayer Leaflet map: disputed territories, civil unrest, earthquakes, submarine cables, all countries, places to visit, architecture & wonders, webcams, wildfires, military aircraft, day/night terminator, dark/satellite base layers, geocode search and country dossiers |
+| **News** | Guardian API plus 18 regional RSS feeds, grouped by region and topic |
+| **Markets** | 60+ symbols across 9 regions, currency conversion, Yahoo Finance with TwelveData fallback |
+| **Shipping** | Live AIS vessels (AISStream) across key chokepoints |
+| **Airspace** | OpenSky OAuth2 live tracking over tension regions, plus a callsign-filtered military aircraft layer |
+| **Hazards** | USGS earthquakes, wildfire hotspots (NASA FIRMS) |
+| **Power structure** | Heads of state and government for every sovereign state, live from Wikidata SPARQL |
+| **Sanctions & governance** | OpenSanctions screening (sample data without a key) and World Bank governance indicators |
+| **Politics** | Elections calendar, G20 / BRICS+ / SCO groups, signal & freedom indices, visa requirements |
+| **Space** | Launch tracker (Launch Library 2) and NASA feeds |
+| **Civil unrest** | ACLED when credentials are approved, Guardian-based city matching otherwise |
+| **Culture** | Architecture & wonders, UNESCO and ASI heritage, "On This Day in Geopolitics" |
+| **AI Copilot** | Streaming assistant (Groq / OpenRouter) grounded in live news, markets and power-structure data, with citations |
+| **Multilingual UI** | 12 languages for core navigation, with RTL support — see limitations below |
 
-- **Natural language** queries in any language
-- **Live grounding** — every answer cites real data sources [1], [2], etc.
-- **Intent detection** — news, markets, or general knowledge
-- **Auto-detects** Groq or OpenAI from API key prefix
-- **Regional awareness** — understands "nifty", "yuan", "riyal", "real" natively
+## Data sources and honest status
 
-### News Coverage (20 Sources)
+Every key is optional — the app boots with zero configuration, and `/api/health` and the homepage report what is armed.
 
-| Region          | Sources                                                         |
-| --------------- | --------------------------------------------------------------- |
-| South Asia      | The Hindu, Indian Express, NDTV, Dawn                           |
-| East Asia       | Japan Times, SCMP, Korea Herald                                 |
-| South-East Asia | Bangkok Post, Straits Times                                     |
-| West Asia       | Al Jazeera, Middle East Eye                                     |
-| Europe & Russia | The Guardian, BBC World, France24, Deutsche Welle, Moscow Times |
-| Africa          | BBC Africa                                                      |
-| Americas        | NYT World, Washington Post                                      |
+| Domain | Source | Works without a key? | Notes |
+| --- | --- | --- | --- |
+| Markets | Yahoo Finance → TwelveData | ✅ Yahoo | Yahoo is an unofficial endpoint and could break without notice |
+| News | Guardian + RSS | ✅ RSS | Add `GUARDIAN_API_KEY` for the Guardian feed; RSS feeds can go stale |
+| Earthquakes | USGS | ✅ | Authoritative and reliable |
+| Power structure | Wikidata | ✅ | Head of state and government only, not full cabinets |
+| Governance | World Bank | ✅ | |
+| Space | Launch Library 2 | ✅ | Tight anonymous rate limit |
+| Shipping | AISStream | ❌ | Needs `NEXT_PUBLIC_AISSTREAM_API_KEY`; coverage depends on receiver density |
+| Airspace / military aircraft | OpenSky | ❌ | OAuth2 client credentials; Basic Auth is deprecated for new accounts |
+| Wildfires | NASA FIRMS | ❌ | Free, instant key |
+| Geocoding | LocationIQ → Nominatim | ⚠️ | Public Nominatim blocks many cloud IPs; a key makes it reliable |
+| Sanctions | OpenSanctions | ⚠️ | **Sample data, clearly labelled**, until a key is set |
+| Civil unrest | ACLED → Guardian | ⚠️ | ACLED approval is pending; the Guardian fallback only catches events with a known city in the headline |
+| Webcams | Windy | ❌ | Needs API approval |
+| AI Copilot | Groq / OpenRouter | ❌ | Either key enables it |
 
-### Markets Coverage (62 Symbols, 9 Regions)
+Sample or placeholder data is always marked (`SAMPLE DATA` / `STARTER SET` badges). Nothing is described as live when it is not.
 
-- **South Asia:** Nifty 50, USD/INR, Reliance
-- **East Asia:** China Large-Cap, Nikkei, KOSPI, USD/CNY, USD/JPY
-- **South-East Asia:** STI, KLCI, PSEi, JCI, SET
-- **West Asia:** USD/SAR, USD/AED, USD/ILS, Oil
-- **Europe & Russia:** FTSE, DAX, CAC, MIB, EUR/USD, GBP/USD, USD/RUB
-- **Africa:** JSE, USD/ZAR, USD/EGP, USD/NGN
-- **Americas:** S&P 500, Nasdaq, Dow, Bovespa, Merval, IPC
-- **Global:** Gold, Silver, Oil, Gas, Bitcoin, Ethereum
+## Tech stack
 
----
+Next.js 15 (App Router, Turbopack) · TypeScript (strict, `noUncheckedIndexedAccess`) · Tailwind CSS · Zustand · Leaflet · Framer Motion · Upstash Redis (optional, in-memory fallback) · Vitest · Playwright · pnpm
 
-## Tech Stack
-
-Next.js 15 (App Router, Turbopack) · TypeScript · Tailwind CSS · Zustand · Leaflet · Framer Motion · Upstash Redis (caching) · Vitest · Playwright
-
-### Data Providers (Free Tier)
-
-| Domain      | Primary              | Fallback                  |
-| ----------- | -------------------- | ------------------------- |
-| News        | Guardian API         | 18 Regional RSS feeds     |
-| Markets     | TwelveData           | (Yahoo Finance — planned) |
-| Earthquakes | USGS                 | GDACS                     |
-| AI          | Groq (llama-3.3-70b) | OpenAI (gpt-4o-mini)      |
-
-Every external provider is optional at the schema level — the app boots clean on a fresh clone with zero configuration.
-
----
-
-## Getting Started
+## Getting started
 
 ```bash
 git clone https://github.com/vikasranax/earth-monitor.git
 cd earth-monitor
 pnpm install
-cp .env.example .env.local
+cp .env.example .env.local   # every key is optional
+pnpm verify:env              # provider readiness board
+pnpm dev                     # http://localhost:3000
 ```
 
-### Environment Variables
+### Environment variables
+
+| Variable | Unlocks |
+| --- | --- |
+| `GROQ_API_KEY` or `OPENROUTER_API_KEY` | AI Copilot |
+| `GUARDIAN_API_KEY` | Guardian news feed |
+| `TWELVEDATA_API_KEY` | Markets fallback |
+| `NEXT_PUBLIC_AISSTREAM_API_KEY` | Live shipping |
+| `OPENSKY_CLIENT_ID` + `OPENSKY_CLIENT_SECRET` | Airspace and military aircraft |
+| `NASA_API_KEY` | NASA space feeds |
+| `NASA_FIRMS_MAP_KEY` | Wildfire hotspots |
+| `LOCATIONIQ_API_KEY` | Reliable geocoding |
+| `OPENSANCTIONS_API_KEY` | Real sanctions data (otherwise sample mode) |
+| `ACLED_EMAIL` + `ACLED_PASSWORD` | Event-level civil unrest (after account approval) |
+| `WINDY_WEBCAMS_API_KEY` | Live webcams (after approval) |
+| `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` | Shared cache and rate limiting |
+| `SITE_URL` | Canonical URL; on Vercel it falls back to the production domain automatically |
+
+`.env.example` also lists keys reserved for future modules (FRED, EIA, OpenAQ, Cloudflare Radar, Gemini, Resend, Firebase, Mapbox). They are not used by any code yet and are not counted in the readiness score.
+
+**Never commit `.env.local`.**
+
+### Deploying to Vercel
+
+Add the same variables under *Project → Settings → Environment Variables* for the **Production** environment, then redeploy. `NEXT_PUBLIC_*` variables are baked in at build time, so they only take effect after a rebuild. Check `/api/health` afterwards to confirm what is armed.
+
+### Quality gate
 
 ```bash
-# AI (required for copilot)
-GROQ_API_KEY=gsk_...                    # or OPENAI_API_KEY=sk-...
-
-# Markets (required for live prices)
-TWELVEDATA_API_KEY=...                  # free tier: 800 req/day
-
-# News (optional — Guardian only)
-GUARDIAN_API_KEY=...
+pnpm typecheck
+pnpm lint
+pnpm test                       # Vitest unit tests
+pnpm exec playwright test       # end-to-end smoke tests
 ```
 
-```bash
-pnpm verify:env    # provider readiness board
-pnpm dev           # http://localhost:3000
-```
+## Design conventions
 
----
+- **Typography:** Space Grotesk (display), IBM Plex Sans (body), IBM Plex Mono (data). No fourth font.
+- **Colour:** CSS custom properties only (`--bg-0…3`, `--fg-0…`, `--accent`, `--ok` / `--warn` / `--danger` / `--info`). Never raw hex in components — it silently breaks the light/dark toggle.
+- **Components:** pages compose from `src/components/terminal/` (`Panel`, `KpiCard`, `LedBadge`, `RiskGauge`, `DataTable`, `Ticker`, `StatusBar`, `CommandPalette`, …) rather than hand-rolled styled divs.
+- **New modules** go in new, self-contained files wherever possible.
 
-## Module Roadmap
+## Principles
 
-| Module | Feature                            | State         |
-| ------ | ---------------------------------- | ------------- |
-| M01    | Foundation & DevEx                 | ✅            |
-| M02    | Terminal UI Design System          | ⏳            |
-| M03    | Data Layer & Ingestion             | ⏳            |
-| M04    | Home Command Deck                  | ⏳            |
-| M05    | Global Map & Country Intel         | ✅            |
-| M05a   | Multilayer Map Engine              | ⏳            |
-| M06    | News Engine                        | ✅            |
-| M07    | Markets Suite                      | ✅            |
-| M08    | Shipping & Straits                 | ⏳            |
-| M09    | Airspace                           | ⏳            |
-| M09a   | Hazard & Disaster Layer            | ✅ (partial)  |
-| M09b   | Infrastructure & Outages           | ⏳            |
-| M10    | Thematic Dashboards                | ⏳            |
-| M11    | Alerts · Auth · Personalisation    | ✅ (scaffold) |
-| M12    | AI Copilot                         | ✅            |
-| M13    | Global Polish & Ship               | ⏳            |
-| M14    | Power Structure & Leadership Intel | ⏳            |
-| M15    | Space & Orbital Tracker            | ⏳            |
-| M16    | Signal & Freedom Indices           | ⏳            |
-| M17    | Multilingual Core                  | ✅ (copilot)  |
+1. **Honesty over impressive fakes.** Sample data is labelled; cache and "live" flags report truthfully.
+2. **Neutrality on disputed territories.** Every claimant's position is shown side by side (Kashmir, Tibet, Taiwan, Crimea, Western Sahara, Golan Heights). No single government's map is treated as authoritative — the same standard for every country. See [`docs/M05-GLOBAL-MAP.md`](docs/M05-GLOBAL-MAP.md).
+3. **Global-first, India/Asia-weighted.** No default to US/EU framing; "West Asia", not "Middle East".
+4. **Graceful fallback chains** over single points of failure (markets, unrest, geocoding).
+5. **Public facts only.** Read-only location and entity data is fine; operational or targeting intelligence is out of scope.
 
----
+## Known limitations
 
-## Architecture
+- **Translations cover core UI chrome only** (about 27 strings × 12 languages). Page content — news, market labels, Copilot answers, dossiers — is English-only. Translations are first-pass and not native-reviewed.
+- **The map may fail to load on some phones** (suspected zero-height Leaflet container). Under investigation.
+- **Gemini is not wired** to the Copilot; Groq and OpenRouter are.
+- **Full country dossiers** exist in depth for about 25 curated countries; others fall back to REST Countries data on demand.
+- Third-party endpoints (Yahoo, RSS feeds, OpenSky) can change or throttle without notice.
+
+## Project layout
 
 ```
 src/
-  app/
-    api/copilot/route.ts       ← AI copilot API (SSE streaming, intent detection)
-    news/page.tsx              ← Categorized news (regions + topics)
-    markets/page.tsx           ← Markets dashboard
+  app/            pages (map, news, markets, shipping, airspace, …) and api/ routes
+  components/     terminal/ (design system), map/, copilot/, i18n/, alerts/, …
   lib/
-    providers/
-      news.ts                  ← Unified Guardian + 18 regional RSS
-      twelvedata.ts            ← Market quotes (62 symbols, 9 regions)
-    markets-watchlist.ts       ← Symbol definitions + alias map
-    fetch-with-cache.ts        ← Redis/Upstash caching
-    rate-limit.ts              ← Per-provider rate limiting
-  components/
-    copilot/
-      ChatPanel.tsx            ← Streaming copilot UI
-      CopilotButton.tsx        ← Toggle button
+    providers/    one file per external data source
+    i18n/         locales, translations, useTranslation
+    modules.ts    module registry (source of truth for status)
+    env.ts        server env contract and readiness report
+  stores/         Zustand stores (settings, watchlist, locale)
+docs/             per-module notes (M01–M44), ADR, vision and tracking
+tests/            unit/ (Vitest) and e2e/ (Playwright)
 ```
-
----
-
-## A Note on Neutrality
-
-This project deliberately avoids taking sides on disputed territorial claims (e.g. Kashmir, Tibet, Taiwan). Every claimant's stated position is shown, none is presented as more authoritative than another. See `docs/M05-GLOBAL-MAP.md` for the full reasoning.
-
----
 
 ## Contributing
 
-Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup and the quality gate PRs must pass. Please also review our [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
-
----
+Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup and the quality gate PRs must pass, and review our [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## License
 
-[AGPL-3.0](LICENSE) — if you run a modified version of this as a network service, you're required to release your source changes too. This keeps the project open even if forked into a hosted product.
-
----
+[AGPL-3.0-or-later](LICENSE) — if you run a modified version of this as a network service, you must release your source changes too. This keeps the project open even if forked into a hosted product.
 
 ## Acknowledgments
 
