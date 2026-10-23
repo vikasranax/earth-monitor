@@ -31,6 +31,19 @@ export interface CountryDossierSnapshot {
 const COUNTRIESNOW_BASE = "https://countriesnow.space/api/v0.1/countries";
 const RESTCOUNTRIES_BASE = "https://restcountries.com/v3.1";
 
+/** Per-request limit for the primary calls. */
+const REQUEST_TIMEOUT_MS = 8000;
+/** Total time budget for the whole CountriesNow fallback, not per request. */
+const FALLBACK_BUDGET_MS = 8000;
+
+interface PositionRow {
+  name: string;
+  iso2: string;
+  iso3: string;
+  lat: number;
+  long: number;
+}
+
 export async function fetchAllCountryDossiers(): Promise<CountryDossierSnapshot> {
   const rateOk = await checkRateLimit("countriesnow", 5, 60);
   if (!rateOk.success) {
@@ -41,15 +54,23 @@ export async function fetchAllCountryDossiers(): Promise<CountryDossierSnapshot>
     const { data, cached } = await fetchWithCache(
       "countries:dossier:all:cn",
       async () => {
-        const res = await fetch(`${COUNTRIESNOW_BASE}/positions`);
-        if (!res.ok) throw new Error(`CountriesNow ${res.status}`);
-        const json = (await res.json()) as {
-          error: boolean;
-          msg: string;
-          data: Array<{ name: string; iso2: string; iso3: string; lat: number; long: number }>;
-        };
-        if (json.error) throw new Error(json.msg);
-        return json.data;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+          const res = await fetch(`${COUNTRIESNOW_BASE}/positions`, {
+            signal: controller.signal,
+          });
+          if (!res.ok) throw new Error(`CountriesNow ${res.status}`);
+          const json = (await res.json()) as {
+            error: boolean;
+            msg: string;
+            data: PositionRow[];
+          };
+          if (json.error) throw new Error(json.msg);
+          return json.data;
+        } finally {
+          clearTimeout(timeout);
+        }
       },
       { ttlSeconds: 3600 },
     );
@@ -88,7 +109,7 @@ export async function fetchCountryByCode(code: string): Promise<CountryDossier |
       `countries:rest:v2:${upperCode}`,
       async () => {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 8000);
+        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         try {
           const res = await fetch(`${RESTCOUNTRIES_BASE}/alpha/${upperCode}`, {
             signal: controller.signal,
@@ -124,21 +145,73 @@ export async function fetchCountryByCode(code: string): Promise<CountryDossier |
   return fetchCountryByCodeFromCountriesNow(upperCode);
 }
 
+/**
+ * POST to a CountriesNow endpoint, trying each identifier in order until one
+ * yields a value. Returns null if none do, or as soon as the shared deadline
+ * (signal) has fired.
+ */
+async function lookup<T>(
+  path: string,
+  identifiers: Record<string, string>[],
+  signal: AbortSignal,
+  extract: (data: unknown) => T | null,
+): Promise<T | null> {
+  for (const id of identifiers) {
+    if (signal.aborted) return null;
+    try {
+      const res = await fetch(`${COUNTRIESNOW_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(id),
+        signal,
+      });
+      if (!res.ok) continue;
+      const json = (await res.json()) as { error?: boolean; data?: unknown };
+      if (json.error) continue;
+      const value = extract(json.data);
+      if (value !== null) return value;
+    } catch {
+      // network error, bad JSON, or deadline: try the next identifier
+    }
+  }
+  return null;
+}
+
+const extractFlag = (data: unknown): string | null => {
+  const flag = (data as { flag?: unknown } | null | undefined)?.flag;
+  return typeof flag === "string" && flag ? flag : null;
+};
+
+const extractCapital = (data: unknown): string | null => {
+  const capital = (data as { capital?: unknown } | null | undefined)?.capital;
+  return typeof capital === "string" && capital ? capital : null;
+};
+
+const extractPopulation = (data: unknown): number | null => {
+  const counts = (data as { populationCounts?: unknown } | null | undefined)?.populationCounts;
+  if (!Array.isArray(counts) || counts.length === 0) return null;
+  const latest = counts[counts.length - 1] as { value?: unknown } | undefined;
+  return typeof latest?.value === "number" && latest.value > 0 ? latest.value : null;
+};
+
 async function fetchCountryByCodeFromCountriesNow(code: string): Promise<CountryDossier | null> {
+  // One deadline for the whole fallback: once it fires, every outstanding and
+  // later request fails fast and we return whatever has been resolved so far.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FALLBACK_BUDGET_MS);
+  const { signal } = controller;
+
   try {
-    // Step 1: Resolve name, iso3, lat/lng from positions list
+    // Step 1: resolve name, iso3 and lat/lng from the positions list.
     let name = code;
     let iso3 = code;
     let lat = 0;
     let lng = 0;
 
     try {
-      const res = await fetch(`${COUNTRIESNOW_BASE}/positions`);
+      const res = await fetch(`${COUNTRIESNOW_BASE}/positions`, { signal });
       if (res.ok) {
-        const json = (await res.json()) as {
-          error: boolean;
-          data: Array<{ name: string; iso2: string; iso3: string; lat: number; long: number }>;
-        };
+        const json = (await res.json()) as { error: boolean; data: PositionRow[] };
         if (!json.error && Array.isArray(json.data)) {
           const match = json.data.find((c) => c.iso2 === code);
           if (match) {
@@ -150,99 +223,39 @@ async function fetchCountryByCodeFromCountriesNow(code: string): Promise<Country
         }
       }
     } catch {
-      // Positions lookup failed, continue with defaults
+      // positions lookup failed: continue with defaults
     }
 
-    // Step 2: Try flag / capital / population with multiple identifiers
+    // Step 2: flag, capital and population in parallel, each trying iso2,
+    // then iso3, then the country name.
     const identifiers: Record<string, string>[] = [{ iso2: code }];
     if (iso3 !== code) identifiers.push({ iso3 });
     if (name !== code) identifiers.push({ country: name });
 
-    let flag = "";
-    let capital = "";
-    let population = 0;
+    const [flag, capital, population] = await Promise.all([
+      lookup("/flag/images", identifiers, signal, extractFlag),
+      lookup("/capital", identifiers, signal, extractCapital),
+      lookup("/population", identifiers, signal, extractPopulation),
+    ]);
 
-    for (const id of identifiers) {
-      if (flag) break;
-      try {
-        const res = await fetch(`${COUNTRIESNOW_BASE}/flag/images`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(id),
-        });
-        if (res.ok) {
-          const json = (await res.json()) as { error: boolean; data?: { flag?: string } };
-          if (!json.error && json.data?.flag) {
-            flag = json.data.flag;
-            break;
-          }
-        }
-      } catch {
-        // try next identifier
-      }
-    }
-
-    for (const id of identifiers) {
-      if (capital) break;
-      try {
-        const res = await fetch(`${COUNTRIESNOW_BASE}/capital`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(id),
-        });
-        if (res.ok) {
-          const json = (await res.json()) as { error: boolean; data?: { capital?: string } };
-          if (!json.error && json.data?.capital) {
-            capital = json.data.capital;
-            break;
-          }
-        }
-      } catch {
-        // try next identifier
-      }
-    }
-
-    for (const id of identifiers) {
-      if (population) break;
-      try {
-        const res = await fetch(`${COUNTRIESNOW_BASE}/population`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(id),
-        });
-        if (res.ok) {
-          const json = (await res.json()) as {
-            error: boolean;
-            data?: { populationCounts?: Array<{ year: number; value: number }> };
-          };
-          if (!json.error && json.data?.populationCounts?.length) {
-            const counts = json.data.populationCounts;
-            const latest = counts[counts.length - 1];
-            if (latest) population = latest.value;
-            break;
-          }
-        }
-      } catch {
-        // try next identifier
-      }
-    }
-
-    // As long as we resolved the country name from positions, return a dossier
+    // As long as the name resolved, or any detail arrived, return a dossier.
     if (name !== code || flag || capital || population) {
       return {
         name: { common: name, official: name },
         cca2: code,
         cca3: iso3,
-        capital: capital ? [capital] : undefined,
+        ...(capital ? { capital: [capital] } : {}),
         region: "Unknown",
-        population,
+        population: population ?? 0,
         flags: flag ? { png: flag } : {},
         latlng: [lat, lng],
-      } as unknown as CountryDossier;
+      };
     }
 
     return null;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }

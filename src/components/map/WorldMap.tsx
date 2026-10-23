@@ -5,6 +5,7 @@ import L from "leaflet";
 import { useEffect } from "react";
 import { countries, type Country } from "@/lib/countries";
 import { disputedTerritories } from "@/lib/disputed-territories";
+import { LAYER_COLORS as C } from "@/lib/map-colors";
 import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 import type { CountryLocation } from "@/lib/providers/country-locations";
 import type { ArchitectureSite } from "@/lib/architecture-wonders";
@@ -12,82 +13,90 @@ import type { WebcamMarker } from "@/lib/providers/webcams";
 import { DayNightLayer } from "@/components/map/DayNightLayer";
 import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
 
+const EDGE = "rgba(255,255,255,0.4)";
+
+// Translucent fill from a theme colour. The plain declaration is the fallback
+// for browsers without color-mix(); they simply drop the second line.
+const translucent = (color: string, pct: number) =>
+  `background:${color};background:color-mix(in srgb, ${color} ${pct}%, transparent);`;
+
 const countryIcon = L.divIcon({
   className: "",
-  html: `<div style="width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);border:1px solid rgba(255,255,255,0.4);"></div>`,
+  html: `<div style="width:10px;height:10px;border-radius:50%;background:${C.country};box-shadow:0 0 8px ${C.country};border:1px solid ${EDGE};"></div>`,
   iconSize: [10, 10],
   iconAnchor: [5, 5],
 });
 
 const disputedIcon = L.divIcon({
   className: "",
-  html: `<div style="width:11px;height:11px;background:var(--warn);transform:rotate(45deg);box-shadow:0 0 8px var(--warn);border:1px solid rgba(255,255,255,0.4);"></div>`,
+  html: `<div style="width:11px;height:11px;background:${C.disputed};transform:rotate(45deg);box-shadow:0 0 8px ${C.disputed};border:1px solid ${EDGE};"></div>`,
   iconSize: [11, 11],
   iconAnchor: [5.5, 5.5],
 });
 
 const unrestIcon = L.divIcon({
   className: "",
-  html: `<div style="width:10px;height:10px;border-radius:50%;background:var(--danger);box-shadow:0 0 8px var(--danger);border:1px solid rgba(255,255,255,0.4);" class="animate-pulse"></div>`,
+  html: `<div style="width:10px;height:10px;border-radius:50%;background:${C.unrest};box-shadow:0 0 8px ${C.unrest};border:1px solid ${EDGE};" class="animate-pulse"></div>`,
   iconSize: [10, 10],
   iconAnchor: [5, 5],
 });
 
 const quakeMajorIcon = L.divIcon({
   className: "",
-  html: `<div style="width:16px;height:16px;border-radius:50%;background:rgba(245,197,66,0.6);box-shadow:0 0 12px rgba(245,197,66,0.8);border:2px solid var(--danger);"></div>`,
+  html: `<div style="width:16px;height:16px;border-radius:50%;${translucent(C.quake, 60)}box-shadow:0 0 12px ${C.quake};border:2px solid ${C.quakeMajor};"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
 
 const quakeModerateIcon = L.divIcon({
   className: "",
-  html: `<div style="width:12px;height:12px;border-radius:50%;background:rgba(245,197,66,0.5);box-shadow:0 0 8px rgba(245,197,66,0.6);border:1.5px solid var(--warn);"></div>`,
+  html: `<div style="width:12px;height:12px;border-radius:50%;${translucent(C.quake, 50)}box-shadow:0 0 8px ${C.quake};border:1.5px solid ${C.quake};"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
 const cableIcon = L.divIcon({
   className: "",
-  html: `<div style="width:8px;height:8px;border-radius:50%;background:#8b7cf6;box-shadow:0 0 6px #8b7cf6;border:1px solid rgba(255,255,255,0.3);"></div>`,
+  html: `<div style="width:8px;height:8px;border-radius:50%;background:${C.cable};box-shadow:0 0 6px ${C.cable};border:1px solid rgba(255,255,255,0.3);"></div>`,
   iconSize: [8, 8],
   iconAnchor: [4, 4],
 });
 
 const placeIcon = L.divIcon({
   className: "",
-  html: `<div style="width:10px;height:10px;background:var(--ok);transform:rotate(45deg);box-shadow:0 0 8px var(--ok);border:1px solid rgba(255,255,255,0.4);"></div>`,
+  html: `<div style="width:10px;height:10px;background:${C.place};transform:rotate(45deg);box-shadow:0 0 8px ${C.place};border:1px solid ${EDGE};"></div>`,
   iconSize: [10, 10],
   iconAnchor: [5, 5],
 });
 
 const architectureIcon = L.divIcon({
   className: "",
-  html: `<div style="width:12px;height:12px;background:#f5c542;clip-path:polygon(50% 0%, 100% 100%, 0% 100%);box-shadow:0 0 8px #f5c542;"></div>`,
+  html: `<div style="width:12px;height:12px;background:${C.architecture};clip-path:polygon(50% 0%, 100% 100%, 0% 100%);box-shadow:0 0 8px ${C.architecture};"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 10],
 });
 
 const webcamIcon = L.divIcon({
   className: "",
-  html: `<div style="width:12px;height:12px;background:#00ffcc;border-radius:2px;box-shadow:0 0 8px #00ffcc;border:1px solid rgba(255,255,255,0.5);"></div>`,
+  html: `<div style="width:12px;height:12px;background:${C.webcam};border-radius:2px;box-shadow:0 0 8px ${C.webcam};border:1px solid rgba(255,255,255,0.5);"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
 const wildfireIcon = L.divIcon({
   className: "",
-  html: `<div style="width:12px;height:12px;border-radius:50%;background:#ff6600;box-shadow:0 0 10px #ff6600, 0 0 4px #ff0000;border:1px solid rgba(255,255,255,0.4);" class="animate-pulse"></div>`,
+  html: `<div style="width:12px;height:12px;border-radius:50%;background:${C.wildfire};box-shadow:0 0 10px ${C.wildfire}, 0 0 4px ${C.unrest};border:1px solid ${EDGE};" class="animate-pulse"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
 
 const militaryIcon = L.divIcon({
   className: "",
-  html: `<div style="width:11px;height:11px;background:#3ba7ff;clip-path:polygon(50% 0%, 0% 100%, 100% 100%);box-shadow:0 0 8px #3ba7ff;border:1px solid rgba(255,255,255,0.4);"></div>`,
+  html: `<div style="width:11px;height:11px;background:${C.military};clip-path:polygon(50% 0%, 0% 100%, 100% 100%);box-shadow:0 0 8px ${C.military};border:1px solid ${EDGE};"></div>`,
   iconSize: [11, 11],
   iconAnchor: [5.5, 5.5],
 });
+
 interface QuakeEvent {
   id: string;
   place: string;
@@ -152,11 +161,34 @@ interface WorldMapProps {
   militaryAircraft?: MilitaryAircraft[];
 }
 
+// Module-level defaults. A fresh `[20, 0]` literal as a default parameter is a
+// new array on every render, which made the controller below re-run setView
+// and snap the map back to the world view whenever the parent re-rendered.
+const DEFAULT_CENTER: [number, number] = [20, 0];
+const DEFAULT_ZOOM = 2;
+
 function MapController({ center, zoom }: { center?: [number, number]; zoom?: number }) {
   const map = useMap();
+  const lat = center?.[0];
+  const lng = center?.[1];
   useEffect(() => {
-    if (center && zoom) map.setView(center, zoom, { animate: true, duration: 1 });
-  }, [center, zoom, map]);
+    if (lat === undefined || lng === undefined || zoom === undefined) return;
+    map.setView([lat, lng], zoom, { animate: true, duration: 1 });
+  }, [lat, lng, zoom, map]);
+  return null;
+}
+
+// Leaflet only measures its container once. If the container is resized later
+// (device rotation, address-bar collapse, late layout) it keeps the stale size
+// and draws grey or partial tiles. This keeps it in sync.
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
+  }, [map]);
   return null;
 }
 
@@ -170,8 +202,8 @@ export function WorldMap({
   quakes = [],
   showCables = false,
   cableLandings = [],
-  center = [20, 0],
-  zoom = 2,
+  center = DEFAULT_CENTER,
+  zoom = DEFAULT_ZOOM,
   showAllCountries = false,
   allCountries = [],
   showPlaces = false,
@@ -195,6 +227,7 @@ export function WorldMap({
       worldCopyJump
     >
       <MapController center={center} zoom={zoom} />
+      <MapResizer />
       {showDayNight && <DayNightLayer />}
       {baseLayer === "dark" ? (
         <TileLayer
@@ -248,7 +281,7 @@ export function WorldMap({
           <Marker key={m.id} position={[m.lat, m.lng]} icon={unrestIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "220px" }}>
-                <strong style={{ color: "var(--danger)" }}>{m.locationName}</strong>
+                <strong style={{ color: C.unrest }}>{m.locationName}</strong>
                 <div style={{ marginTop: "4px", color: "var(--fg-2)" }}>
                   {m.count} event{m.count === 1 ? "" : "s"} recorded
                 </div>
@@ -292,7 +325,7 @@ export function WorldMap({
           >
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
-                <strong style={{ color: q.magnitude >= 6 ? "#ff4d4f" : "#f5c542" }}>
+                <strong style={{ color: q.magnitude >= 6 ? C.quakeMajor : C.quake }}>
                   M{q.magnitude.toFixed(1)} — {q.place}
                 </strong>
                 <div style={{ marginTop: "4px" }}>Depth: {q.depth.toFixed(1)} km</div>
@@ -332,7 +365,7 @@ export function WorldMap({
           <Marker key={p.id ?? p.name} position={[p.lat, p.lng]} icon={placeIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "160px" }}>
-                <strong style={{ color: "var(--ok)" }}>{p.name}</strong>
+                <strong style={{ color: C.place }}>{p.name}</strong>
                 {p.country && (
                   <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>{p.country}</div>
                 )}
@@ -349,7 +382,7 @@ export function WorldMap({
           <Marker key={s.name} position={[s.lat, s.lng]} icon={architectureIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
-                <strong style={{ color: "#f5c542" }}>{s.name}</strong>
+                <strong style={{ color: C.architecture }}>{s.name}</strong>
                 <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
                   {s.location}, {s.country}
                 </div>
@@ -361,9 +394,15 @@ export function WorldMap({
       {showWebcams &&
         webcams.map((w) => (
           <Marker key={w.id} position={[w.lat, w.lng]} icon={webcamIcon}>
-            <Popup minWidth={340} maxWidth={340}>
-              <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "320px" }}>
-                <strong style={{ color: "#00ffcc" }}>{w.title}</strong>
+            <Popup minWidth={240} maxWidth={340}>
+              <div
+                style={{
+                  fontFamily: "monospace",
+                  fontSize: "12px",
+                  width: "min(320px, 70vw)",
+                }}
+              >
+                <strong style={{ color: C.webcam }}>{w.title}</strong>
                 <div
                   style={{
                     marginTop: "8px",
@@ -376,9 +415,9 @@ export function WorldMap({
                     src={w.playerUrl}
                     width="100%"
                     height="180"
-                    frameBorder="0"
+                    loading="lazy"
                     allowFullScreen
-                    style={{ display: "block" }}
+                    style={{ display: "block", border: 0 }}
                     title={w.title}
                   ></iframe>
                 </div>
@@ -392,7 +431,7 @@ export function WorldMap({
           <Marker key={w.id} position={[w.lat, w.lng]} icon={wildfireIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
-                <strong style={{ color: "#ff6600" }}>Active Fire</strong>
+                <strong style={{ color: C.wildfire }}>Active Fire</strong>
                 <div style={{ marginTop: "4px" }}>Brightness: {w.brightness}K</div>
                 <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
                   Satellite: {w.satellite}
@@ -411,7 +450,7 @@ export function WorldMap({
           <Marker key={a.id} position={[a.lat, a.lng]} icon={militaryIcon}>
             <Popup>
               <div style={{ fontFamily: "monospace", fontSize: "12px", minWidth: "180px" }}>
-                <strong style={{ color: "#3ba7ff" }}>{a.callsign}</strong>
+                <strong style={{ color: C.military }}>{a.callsign}</strong>
                 <div style={{ marginTop: "2px", color: "var(--fg-2)" }}>
                   {a.aircraftType} · {a.registration}
                 </div>
@@ -422,7 +461,7 @@ export function WorldMap({
                   </div>
                 )}
                 <div style={{ marginTop: "6px", color: "var(--fg-muted)", fontSize: "10px" }}>
-                  Source: adsb.lol · unfiltered
+                  Source: OpenSky · callsign-matched (partial)
                 </div>
               </div>
             </Popup>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { StatusBar, CommandPalette } from "@/components/terminal";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,6 +9,8 @@ import { CountryDossier } from "@/components/map/CountryDossier";
 import { cableLandings } from "@/lib/cable-landings";
 import { placesToVisit } from "@/lib/places-to-visit";
 import { architectureSites } from "@/lib/architecture-wonders";
+import { LAYER_COLORS as C } from "@/lib/map-colors";
+import { pickArray, useMapLayer } from "@/hooks/useMapLayer";
 import type { Country } from "@/lib/countries";
 import type { UnrestMarker } from "@/lib/providers/unrest-acled";
 import type { WebcamMarker } from "@/lib/providers/webcams";
@@ -15,7 +18,6 @@ import type { WildfireMarker } from "@/lib/providers/wildfires";
 import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
 import type { GeocodeResult } from "@/lib/providers/nominatim";
 import type { CountryDossier as RestCountryDossier } from "@/lib/providers/rest-countries";
-import type { ReactNode } from "react";
 
 const WorldMap = dynamic(() => import("@/components/map/WorldMap").then((mod) => mod.WorldMap), {
   ssr: false,
@@ -38,6 +40,42 @@ interface CountryLocation {
   lng: number;
 }
 
+type SwatchShape = "circle" | "diamond" | "triangle" | "square";
+
+function LayerSwatch({
+  shape,
+  color,
+  pulse = false,
+}: {
+  shape: SwatchShape;
+  color: string;
+  pulse?: boolean;
+}) {
+  if (shape === "triangle") {
+    return (
+      <div
+        style={{
+          width: 0,
+          height: 0,
+          borderLeft: "4px solid transparent",
+          borderRight: "4px solid transparent",
+          borderBottom: `8px solid ${color}`,
+        }}
+      />
+    );
+  }
+  const style: CSSProperties = {
+    width: 8,
+    height: 8,
+    background: color,
+    boxShadow: `0 0 4px ${color}`,
+  };
+  if (shape === "circle") style.borderRadius = "50%";
+  if (shape === "diamond") style.transform = "rotate(45deg)";
+  if (shape === "square") style.borderRadius = 2;
+  return <div style={style} className={pulse ? "animate-pulse" : undefined} />;
+}
+
 function LayerToggle({
   label,
   active,
@@ -51,6 +89,8 @@ function LayerToggle({
 }) {
   return (
     <button
+      type="button"
+      aria-pressed={active}
       onClick={onToggle}
       className={`flex items-center justify-between w-full px-3 py-2 rounded-[var(--radius-sm)] border font-mono text-xs transition-colors ${
         active
@@ -72,6 +112,16 @@ function LayerToggle({
   );
 }
 
+function LayerError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return <p className="text-[10px] text-[var(--danger)] font-mono px-1">{message}</p>;
+}
+
+const BASE_LAYERS = [
+  { id: "dark", label: "Dark" },
+  { id: "satellite", label: "Satellite" },
+] as const;
+
 function BaseLayerControl({
   baseLayer,
   onChange,
@@ -81,57 +131,54 @@ function BaseLayerControl({
 }) {
   return (
     <div className="flex gap-1 p-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)]">
-      <button
-        onClick={() => onChange("dark")}
-        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${
-          baseLayer === "dark"
-            ? "bg-[var(--accent)] text-white"
-            : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"
-        }`}
-      >
-        Dark
-      </button>
-      <button
-        onClick={() => onChange("satellite")}
-        className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${
-          baseLayer === "satellite"
-            ? "bg-[var(--accent)] text-white"
-            : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"
-        }`}
-      >
-        Satellite
-      </button>
+      {BASE_LAYERS.map((b) => (
+        <button
+          key={b.id}
+          type="button"
+          aria-pressed={baseLayer === b.id}
+          onClick={() => onChange(b.id)}
+          className={`flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] font-mono text-[10px] uppercase tracking-wider transition-colors ${
+            baseLayer === b.id
+              ? "bg-[var(--accent)] text-white"
+              : "text-[var(--fg-2)] hover:bg-[var(--bg-3)]"
+          }`}
+        >
+          {b.label}
+        </button>
+      ))}
     </div>
   );
 }
 
+const withLoading = (label: string, loading: boolean) => (loading ? `${label} (loading…)` : label);
+
 export default function MapPage() {
   const [selected, setSelected] = useState<Country | null>(null);
   const [baseLayer, setBaseLayer] = useState<"dark" | "satellite">("dark");
+
+  // Static layers (data ships with the app).
   const [showDisputed, setShowDisputed] = useState(true);
-  const [showUnrest, setShowUnrest] = useState(false);
-  const [showQuakes, setShowQuakes] = useState(false);
   const [showCables, setShowCables] = useState(false);
-  const [showAllCountries, setShowAllCountries] = useState(false);
   const [showPlaces, setShowPlaces] = useState(false);
   const [showArchitecture, setShowArchitecture] = useState(false);
-  const [showWebcams, setShowWebcams] = useState(false);
-  const [allCountries, setAllCountries] = useState<CountryLocation[]>([]);
-  const [quakes, setQuakes] = useState<QuakeEvent[]>([]);
-  const [unrestMarkers, setUnrestMarkers] = useState<UnrestMarker[]>([]);
-  const [webcams, setWebcams] = useState<WebcamMarker[]>([]);
-  const [webcamError, setWebcamError] = useState<string | null>(null);
-  const [loadingQuakes, setLoadingQuakes] = useState(false);
-  const [loadingUnrest, setLoadingUnrest] = useState(false);
-  const [loadingWebcams, setLoadingWebcams] = useState(false);
   const [showDayNight, setShowDayNight] = useState(false);
-  const [showWildfires, setShowWildfires] = useState(false);
-  const [wildfires, setWildfires] = useState<WildfireMarker[]>([]);
-  const [loadingWildfires, setLoadingWildfires] = useState(false);
-  const [showMilitary, setShowMilitary] = useState(false);
-  const [militaryAircraft, setMilitaryAircraft] = useState<MilitaryAircraft[]>([]);
-  const [militaryError, setMilitaryError] = useState<string | null>(null);
-  const [loadingMilitary, setLoadingMilitary] = useState(false);
+
+  // Fetched layers (loaded the first time they are switched on).
+  const unrest = useMapLayer<UnrestMarker>("/api/unrest/live", pickArray<UnrestMarker>("markers"));
+  const quakes = useMapLayer<QuakeEvent>("/api/quakes", pickArray<QuakeEvent>("events"));
+  const allCountries = useMapLayer<CountryLocation>(
+    "/api/countries/locations",
+    pickArray<CountryLocation>("locations"),
+  );
+  const webcams = useMapLayer<WebcamMarker>("/api/webcams", pickArray<WebcamMarker>("markers"));
+  const wildfires = useMapLayer<WildfireMarker>(
+    "/api/wildfires",
+    pickArray<WildfireMarker>("markers"),
+  );
+  const military = useMapLayer<MilitaryAircraft>(
+    "/api/airspace/military",
+    pickArray<MilitaryAircraft>("aircraft"),
+  );
 
   const [geocodeQuery, setGeocodeQuery] = useState("");
   const [geocodeResults, setGeocodeResults] = useState<GeocodeResult[]>([]);
@@ -140,15 +187,6 @@ export default function MapPage() {
   const [restDossier, setRestDossier] = useState<RestCountryDossier | null>(null);
   const [restDossierLoading, setRestDossierLoading] = useState(false);
   const [restDossierError, setRestDossierError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (showAllCountries && allCountries.length === 0) {
-      fetch("/api/countries/locations")
-        .then((res) => res.json())
-        .then((data) => setAllCountries(data.locations || []))
-        .catch(() => setAllCountries([]));
-    }
-  }, [showAllCountries, allCountries.length]);
 
   const handleGeocodeSearch = async () => {
     const query = geocodeQuery.trim();
@@ -211,103 +249,53 @@ export default function MapPage() {
     }
   };
 
-  const handleToggleQuakes = async () => {
-    const next = !showQuakes;
-    setShowQuakes(next);
-    if (next && quakes.length === 0) {
-      setLoadingQuakes(true);
-      try {
-        const res = await fetch("/api/quakes");
-        if (res.ok) {
-          const data = await res.json();
-          setQuakes(data.events || []);
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        setLoadingQuakes(false);
-      }
-    }
-  };
-
-  const handleToggleUnrest = async () => {
-    const next = !showUnrest;
-    setShowUnrest(next);
-    if (next && unrestMarkers.length === 0) {
-      setLoadingUnrest(true);
-      try {
-        const res = await fetch("/api/unrest/live");
-        const data = await res.json();
-        setUnrestMarkers(data.markers || []);
-      } catch {
-        /* ignore */
-      } finally {
-        setLoadingUnrest(false);
-      }
-    }
-  };
-
-  const handleToggleWebcams = async () => {
-    const next = !showWebcams;
-    setShowWebcams(next);
-    if (next && webcams.length === 0) {
-      setLoadingWebcams(true);
-      setWebcamError(null);
-      try {
-        const res = await fetch("/api/webcams");
-        const data = await res.json();
-        if (data.error) setWebcamError(data.error);
-        setWebcams(data.markers || []);
-      } catch (err) {
-        setWebcamError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setLoadingWebcams(false);
-      }
-    }
-  };
-
-  const handleToggleWildfires = async () => {
-    const next = !showWildfires;
-    setShowWildfires(next);
-    if (next && wildfires.length === 0) {
-      setLoadingWildfires(true);
-      try {
-        const res = await fetch("/api/wildfires");
-        const data = await res.json();
-        setWildfires(data.markers || []);
-      } catch {
-        /* ignore */
-      } finally {
-        setLoadingWildfires(false);
-      }
-    }
-  };
-
-  const handleToggleMilitary = async () => {
-    const next = !showMilitary;
-    setShowMilitary(next);
-    if (next && militaryAircraft.length === 0) {
-      setLoadingMilitary(true);
-      setMilitaryError(null);
-      try {
-        const res = await fetch("/api/airspace/military");
-        const data = await res.json();
-        if (data.error) setMilitaryError(data.error);
-        setMilitaryAircraft(data.aircraft || []);
-      } catch (err) {
-        setMilitaryError(err instanceof Error ? err.message : "Failed to load");
-      } finally {
-        setLoadingMilitary(false);
-      }
-    }
-  };
-
   return (
     <ThemeProvider>
       <div className="min-h-screen flex flex-col bg-[var(--bg-0)]">
         <StatusBar />
         <div className="flex-1 flex flex-col md:flex-row gap-0">
-          <div className="w-full md:w-80 shrink-0 border-b md:border-b-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3 overflow-y-auto max-h-screen">
+          {/*
+            Map. On phones it comes first with an explicit height; flex-1 must
+            NOT apply below md (in a column it sets flex-basis:0 and overrides
+            the height, collapsing Leaflet's height:100% to 0). The map fills
+            an absolutely positioned layer so its size never depends on flex
+            maths.
+          */}
+          <div className="relative order-1 md:order-2 h-[60dvh] min-h-[320px] flex-none md:h-auto md:min-h-[480px] md:min-w-0 md:flex-1">
+            <div className="absolute inset-0">
+              <WorldMap
+                onSelectCountry={setSelected}
+                baseLayer={baseLayer}
+                showDisputed={showDisputed}
+                showUnrest={unrest.active}
+                unrestMarkers={unrest.items}
+                showQuakes={quakes.active}
+                quakes={quakes.items}
+                showCables={showCables}
+                cableLandings={cableLandings}
+                showAllCountries={allCountries.active}
+                allCountries={allCountries.items}
+                showPlaces={showPlaces}
+                placesToVisit={placesToVisit}
+                showDayNight={showDayNight}
+                showArchitecture={showArchitecture}
+                architectureSites={architectureSites}
+                showWebcams={webcams.active}
+                webcams={webcams.items}
+                showWildfires={wildfires.active}
+                wildfires={wildfires.items}
+                showMilitary={military.active}
+                militaryAircraft={military.items}
+              />
+            </div>
+          </div>
+
+          <aside className="order-2 md:order-1 w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-r border-[var(--border)] bg-[var(--bg-1)] p-4 flex flex-col gap-3 md:max-h-screen md:overflow-y-auto">
+            {/* Dossier: directly under the map on phones, at the bottom on desktop. */}
+            <div className="order-first md:order-last md:mt-auto pb-3 md:pb-0 md:pt-4 border-b md:border-b-0 md:border-t border-[var(--border)]">
+              <CountryDossier country={selected} />
+            </div>
+
             <div className="font-mono text-[10px] uppercase tracking-widest text-[var(--fg-2)] mb-1">
               Base Layer
             </div>
@@ -319,171 +307,68 @@ export default function MapPage() {
               label="Disputed Territories"
               active={showDisputed}
               onToggle={() => setShowDisputed((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    background: "var(--warn)",
-                    transform: "rotate(45deg)",
-                    boxShadow: "0 0 4px var(--warn)",
-                  }}
-                />
-              }
+              markerIcon={<LayerSwatch shape="diamond" color={C.disputed} />}
             />
             <LayerToggle
-              label={`Civil Unrest ${loadingUnrest ? "(loading…)" : ""}`}
-              active={showUnrest}
-              onToggle={handleToggleUnrest}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "var(--danger)",
-                    boxShadow: "0 0 4px var(--danger)",
-                  }}
-                  className="animate-pulse"
-                />
-              }
+              label={withLoading("Civil Unrest", unrest.loading)}
+              active={unrest.active}
+              onToggle={unrest.toggle}
+              markerIcon={<LayerSwatch shape="circle" color={C.unrest} pulse />}
             />
+            <LayerError message={unrest.error} />
             <LayerToggle
-              label={`Earthquakes ${loadingQuakes ? "(loading…)" : ""}`}
-              active={showQuakes}
-              onToggle={handleToggleQuakes}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#f5c542",
-                    border: "1.5px solid #b38f00",
-                    boxShadow: "0 0 4px #f5c542",
-                  }}
-                />
-              }
+              label={withLoading("Earthquakes", quakes.loading)}
+              active={quakes.active}
+              onToggle={quakes.toggle}
+              markerIcon={<LayerSwatch shape="circle" color={C.quake} />}
             />
+            <LayerError message={quakes.error} />
             <LayerToggle
               label="Submarine Cables"
               active={showCables}
               onToggle={() => setShowCables((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    background: "#8b7cf6",
-                    boxShadow: "0 0 3px #8b7cf6",
-                  }}
-                />
-              }
+              markerIcon={<LayerSwatch shape="circle" color={C.cable} />}
             />
             <LayerToggle
-              label="All Countries"
-              active={showAllCountries}
-              onToggle={() => setShowAllCountries((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    background: "var(--accent)",
-                    boxShadow: "0 0 3px var(--accent)",
-                  }}
-                />
-              }
+              label={withLoading("All Countries", allCountries.loading)}
+              active={allCountries.active}
+              onToggle={allCountries.toggle}
+              markerIcon={<LayerSwatch shape="circle" color={C.country} />}
             />
+            <LayerError message={allCountries.error} />
             <LayerToggle
               label="Places to Visit"
               active={showPlaces}
               onToggle={() => setShowPlaces((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    background: "var(--ok)",
-                    transform: "rotate(45deg)",
-                    boxShadow: "0 0 4px var(--ok)",
-                  }}
-                />
-              }
+              markerIcon={<LayerSwatch shape="diamond" color={C.place} />}
             />
             <LayerToggle
               label="Architecture & Wonders"
               active={showArchitecture}
               onToggle={() => setShowArchitecture((v) => !v)}
-              markerIcon={
-                <div
-                  style={{
-                    width: "0",
-                    height: "0",
-                    borderLeft: "4px solid transparent",
-                    borderRight: "4px solid transparent",
-                    borderBottom: "8px solid #f5c542",
-                  }}
-                />
-              }
+              markerIcon={<LayerSwatch shape="triangle" color={C.architecture} />}
             />
             <LayerToggle
-              label={`Live Webcams ${loadingWebcams ? "(loading…)" : ""}`}
-              active={showWebcams}
-              onToggle={handleToggleWebcams}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    background: "#00ffcc",
-                    borderRadius: "2px",
-                    boxShadow: "0 0 4px #00ffcc",
-                  }}
-                />
-              }
+              label={withLoading("Live Webcams", webcams.loading)}
+              active={webcams.active}
+              onToggle={webcams.toggle}
+              markerIcon={<LayerSwatch shape="square" color={C.webcam} />}
             />
-            {webcamError && (
-              <p className="text-[10px] text-[var(--danger)] font-mono px-1">{webcamError}</p>
-            )}
+            <LayerError message={webcams.error} />
             <LayerToggle
-              label={`Military Aircraft ${loadingMilitary ? "(loading…)" : ""}`}
-              active={showMilitary}
-              onToggle={handleToggleMilitary}
-              markerIcon={
-                <div
-                  style={{
-                    width: "0",
-                    height: "0",
-                    borderLeft: "4px solid transparent",
-                    borderRight: "4px solid transparent",
-                    borderBottom: "8px solid #3ba7ff",
-                  }}
-                />
-              }
+              label={withLoading("Military Aircraft", military.loading)}
+              active={military.active}
+              onToggle={military.toggle}
+              markerIcon={<LayerSwatch shape="triangle" color={C.military} />}
             />
-            {militaryError && (
-              <p className="text-[10px] text-[var(--danger)] font-mono px-1">{militaryError}</p>
-            )}
+            <LayerError message={military.error} />
             <LayerToggle
-              label={`Wildfire Hotspots ${loadingWildfires ? "(loading…)" : ""}`}
-              active={showWildfires}
-              onToggle={handleToggleWildfires}
-              markerIcon={
-                <div
-                  style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#ff6600",
-                    boxShadow: "0 0 4px #ff6600",
-                  }}
-                  className="animate-pulse"
-                />
-              }
+              label={withLoading("Wildfire Hotspots", wildfires.loading)}
+              active={wildfires.active}
+              onToggle={wildfires.toggle}
+              markerIcon={<LayerSwatch shape="circle" color={C.wildfire} pulse />}
             />
+            <LayerError message={wildfires.error} />
             <LayerToggle
               label="Day/Night"
               active={showDayNight}
@@ -510,9 +395,11 @@ export default function MapPage() {
                 onChange={(e) => setGeocodeQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleGeocodeSearch()}
                 placeholder="Search place or country…"
+                aria-label="Search place or country"
                 className="flex-1 px-2 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)] text-xs text-[var(--fg-0)] font-mono placeholder:text-[var(--fg-muted)] focus:outline-none focus:border-[var(--accent)]"
               />
               <button
+                type="button"
                 onClick={handleGeocodeSearch}
                 disabled={geocodeLoading}
                 className="px-2 py-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg-2)] text-[var(--fg-2)] font-mono text-xs hover:bg-[var(--bg-3)] disabled:opacity-50"
@@ -536,6 +423,7 @@ export default function MapPage() {
                 {geocodeResults.map((r) => (
                   <button
                     key={r.place_id}
+                    type="button"
                     onClick={() => handleSelectGeocodeResult(r)}
                     className="text-left px-2 py-1.5 rounded-[var(--radius-sm)] text-[10px] text-[var(--fg-1)] font-mono bg-[var(--bg-3)] hover:bg-[var(--accent)]/20 hover:text-[var(--accent)] transition-colors border border-transparent hover:border-[var(--accent)]"
                   >
@@ -642,38 +530,7 @@ export default function MapPage() {
                 </div>
               </div>
             )}
-
-            <div className="mt-auto pt-4 border-t border-[var(--border)]">
-              <CountryDossier country={selected} />
-            </div>
-          </div>
-
-          <div className="flex-1 h-[500px] md:h-auto relative">
-            <WorldMap
-              onSelectCountry={setSelected}
-              baseLayer={baseLayer}
-              showDisputed={showDisputed}
-              showUnrest={showUnrest}
-              unrestMarkers={unrestMarkers}
-              showQuakes={showQuakes}
-              quakes={quakes}
-              showCables={showCables}
-              cableLandings={cableLandings}
-              showAllCountries={showAllCountries}
-              allCountries={allCountries}
-              showPlaces={showPlaces}
-              placesToVisit={placesToVisit}
-              showDayNight={showDayNight}
-              showArchitecture={showArchitecture}
-              architectureSites={architectureSites}
-              showWebcams={showWebcams}
-              webcams={webcams}
-              showWildfires={showWildfires}
-              wildfires={wildfires}
-              showMilitary={showMilitary}
-              militaryAircraft={militaryAircraft}
-            />
-          </div>
+          </aside>
         </div>
         <CommandPalette />
       </div>
