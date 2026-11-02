@@ -13,6 +13,12 @@ import type { WebcamMarker } from "@/lib/providers/webcams";
 import { DayNightLayer } from "@/components/map/DayNightLayer";
 import type { MilitaryAircraft } from "@/lib/providers/military-aircraft";
 
+// CARTO requires a free API key on its basemap tiles (since Aug 2026).
+const CARTO_KEY = process.env.NEXT_PUBLIC_CARTO_API_KEY;
+const DARK_TILES =
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" +
+  (CARTO_KEY ? `?key=${CARTO_KEY}` : "");
+
 const EDGE = "rgba(255,255,255,0.4)";
 
 // Translucent fill from a theme colour. The plain declaration is the fallback
@@ -166,6 +172,12 @@ interface WorldMapProps {
 // and snap the map back to the world view whenever the parent re-rendered.
 const DEFAULT_CENTER: [number, number] = [20, 0];
 const DEFAULT_ZOOM = 2;
+// Stop vertical panning past the poles. Longitude is left very wide so
+// sideways world-wrapping (worldCopyJump) still works.
+const WORLD_BOUNDS: [[number, number], [number, number]] = [
+  [-85, -3600],
+  [85, 3600],
+];
 
 function MapController({ center, zoom }: { center?: [number, number]; zoom?: number }) {
   const map = useMap();
@@ -223,6 +235,8 @@ export function WorldMap({
       center={center}
       zoom={zoom}
       minZoom={2}
+      maxBounds={WORLD_BOUNDS}
+      maxBoundsViscosity={1}
       style={{ height: "100%", width: "100%", background: "var(--bg-1)" }}
       worldCopyJump
     >
@@ -231,7 +245,7 @@ export function WorldMap({
       {showDayNight && <DayNightLayer />}
       {baseLayer === "dark" ? (
         <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={DARK_TILES}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
       ) : (

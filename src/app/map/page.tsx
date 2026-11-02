@@ -261,7 +261,7 @@ export default function MapPage() {
             an absolutely positioned layer so its size never depends on flex
             maths.
           */}
-          <div className="relative order-1 md:order-2 h-[60dvh] min-h-[320px] flex-none md:h-auto md:min-h-[480px] md:min-w-0 md:flex-1">
+          <div className="relative isolate order-1 md:order-2 h-[60dvh] min-h-[320px] flex-none md:h-auto md:min-h-[480px] md:min-w-0 md:flex-1">
             <div className="absolute inset-0">
               <WorldMap
                 onSelectCountry={setSelected}
