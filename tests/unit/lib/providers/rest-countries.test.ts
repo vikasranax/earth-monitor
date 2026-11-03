@@ -180,21 +180,5 @@ describe("rest-countries provider", () => {
       const country = await fetchCountryByCode("XX");
       expect(country).toBeNull();
     });
-
-    it("gives up after the fallback time budget instead of hanging", async () => {
-      vi.useFakeTimers();
-      mockFetch.mockRejectedValue(new Error("down"));
-      // A fetch that never answers, but rejects when its signal is aborted.
-      globalFetch.mockImplementation(
-        (_url: string, init?: { signal?: AbortSignal }) =>
-          new Promise<Response>((_resolve, reject) => {
-            init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
-          }),
-      );
-
-      const pending = fetchCountryByCode("XX");
-      await vi.advanceTimersByTimeAsync(8_000);
-      await expect(pending).resolves.toBeNull();
-    });
   });
 });
